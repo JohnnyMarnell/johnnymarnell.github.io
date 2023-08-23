@@ -10,5 +10,5 @@ Most recently I was a Staff Engineer at Spotify in the Advertising Business Unit
 - Live beat sync / detection using Librosa powered predictions [Jupyter Notebook](./jupyter/tempo.html), [Quick Demo Vid](https://youtu.be/wihCkwniqwU)
 
 # Connect
-- https://www.linkedin.com/in/johnnymarnell
-- https://www.instagram.com/johnnymarnell
+- [LinkedIn](https://www.linkedin.com/in/johnnymarnell)
+- [Instagram @johnnymarnell](https://www.instagram.com/johnnymarnell)
