@@ -1,7 +1,9 @@
 #### Live Beat Sync with Librosa
 
-[**_Quick Demo Video_**](https://www.youtube.com/watch?v=wihCkwniqwU)
+[**_Quick Demo Video showing detection and sync_**](https://www.youtube.com/watch?v=wihCkwniqwU)
+
 [**_See it Live with LEDs_**](./led-art.html)
+
 [**_Jupyter Notebook Prototyping_**](./jupyter/tempo.html)
 
 I read about and tried a few solutions for beat detection like Ableton's built-in BeatSeeker, but I couldn't get anything reliable. I decided to try my own approach using [Librosa](https://librosa.org), which is chock full of great stuff, including some beat/onset envelope detection algorithms.
