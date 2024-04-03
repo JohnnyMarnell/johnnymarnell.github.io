@@ -21,7 +21,8 @@ at Spotify in the Advertising Business Unit.
 - Coming Soon: My custom Raspberry Pi looper performance rig
 
 - [**Bass Bounce Visualization**](https://www.youtube.com/watch?v=d0XzIzDG8k0)
-  Built automatic audio reactive visualization based on FFT analyzed dynamic signals, LX Studio. You can see the bounce start and stop depending on bass thumps
+  Built automatic audio reactive visualization based on FFT analyzed dynamic signals,
+  Java with LX Studio. You can see the bounce start and stop depending on bass thumps
 
 - [**Spotify Quarantine Halloween**](https://www.instagram.com/p/CG-u44ElvNk11U1LTU6wTNDM25x7Km-Vq7ns6o0)
   My band plus some teammates made a silly _"Hungry Like the Wolf"_ video
