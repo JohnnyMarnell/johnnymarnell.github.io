@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>LEDs</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 20px;
+        }
+
+        .video-container {
+            width: 1280px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        #summary {
+            width: 1000px;
+        }
+
+        .video-item {
+            width: 350px;
+            margin-bottom: 20px;
+        }
+    </style>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/ui@5.0/dist/fancybox/fancybox.css" />
+    <script src="https://kit.fontawesome.com/d7aa9388b3.js" crossorigin="anonymous"></script>
+</head>
+
+<body>
+    <div id="summary">
+        <h1>LEDs</h1>
+        <p>
+            I went to Burning Man for the first time in 2023. The camp I joined had begun an impressive LED light
+            installation the year prior and were hoping to improve upon it.
+        </p>
+
+        <p>
+            With my help, we arrived at a dense 10,000+ LED ceiling grid with beautiful animations powered by a
+            Raspberry Pi.
+
+            All LED pixels are individually addressable with custom diffuse tubing for smooth, bright, gorgeous colors.
+        </p>
+        <p>
+            I learned <a href="https://chromatik.co/">LX Studio / Chromatik</a> (a.k.a. the Ableton Live of light) and
+            wrote almost all the java code powering the animations.
+
+            Wanting to evangelize and crowd-source, I built reusable components (e.g. modulators tied to the beat of
+            music) that any campmate could use to create new patterns with a UI.
+
+            I also ported the <a href="https://electromage.com/pixelblaze/">Pixelblaze</a> universe to run on our
+            system, giving us access to even more patterns.
+
+        <p>
+            <strong>I'm most proud of the audio reactive capability I built</strong>, especially realtime beat detection
+            and syncing using the amazing python music ML library <a href="https://librosa.org/">Librosa</a>.
+            Here's a <a href="https://www.youtube.com/watch?v=wihCkwniqwU">video</a> demonstrating, as well as the <a
+                href="./jupyter/tempo.html">Jupyter
+                notebook</a> I wrote for
+            prototyping, full code <a
+                href="https://github.com/JohnnyMarnell/iqe?tab=readme-ov-file#audio-analysis">here</a>.
+        </p>
+        </p>
+        <p>
+            I even wrote a custom webapp to control it over wifi from our phones.
+            The overall effect was truly stunning, and we were so happy (and proud) to be contributing to the art there.
+        </p>
+    </div>
+
+    <div class="video-container">
+        <!-- <div class="video-item"> -->
+        <!-- idk about this ... width="100%" -->
+        <!-- <iframe width="350" height="200" src="https://www.youtube.com/embed/qo0L7gmySvQ" frameborder="0" -->
+        <!-- allowfullscreen></iframe> -->
+        <!-- </div> -->
+
+        <a href="https://www.youtube.com/watch?v=qo0L7gmySvQ" data-fancybox="gallery">
+            <div style="position: relative; display: inline-block;">
+                <div style="overflow: hidden; width: 350px; height: 200px">
+                    <img src="https://img.youtube.com/vi/qo0L7gmySvQ/maxresdefault.jpg"
+                        style="position: relative; top: -50px; width: 480px;">
+                </div>
+                <i class="fas fa-play" style="position: absolute; top: 50%; left: 50%; transform:
+                    translate(-50%, -50%) scale(4); opacity: 1.0; color: red"></i>
+            </div>
+        </a>
+
+        <a href="https://www.youtube.com/watch?v=C8sHgpCKFPA" data-fancybox="gallery">
+            <div style="position: relative; display: inline-block;">
+                <div style="overflow: hidden; width: 350px; height: 200px">
+                    <img src="https://img.youtube.com/vi/C8sHgpCKFPA/maxresdefault.jpg"
+                        style="position: relative; top: -50px; width: 480px;">
+                </div>
+                <i class="fas fa-play" style="position: absolute; top: 50%; left: 50%; transform:
+                    translate(-50%, -50%) scale(4); opacity: 1.0; color: red"></i>
+            </div>
+        </a>
+
+        <a href="https://www.youtube.com/watch?v=UL10vjc54Lw" data-fancybox="gallery">
+            <div style="position: relative; display: inline-block;">
+                <div style="overflow: hidden; width: 350px; height: 200px">
+                    <img src="https://img.youtube.com/vi/UL10vjc54Lw/maxresdefault.jpg"
+                        style="position: relative; top: -50px; width: 480px;">
+                </div>
+                <i class="fas fa-play" style="position: absolute; top: 50%; left: 50%; transform:
+                    translate(-50%, -50%) scale(4); opacity: 1.0; color: red"></i>
+            </div>
+        </a>
+
+        <!-- <div class="video-item"><iframe width="100%" height="200" src="https://www.youtube.com/embed/nLRTtxrm7z0" frameborder="0" allowfullscreen></iframe></div> -->
+        <!-- <div class="video-item"><iframe width="100%" height="200" src="https://www.youtube.com/embed/SzUIuTK63jA" frameborder="0" allowfullscreen></iframe></div> -->
+
+        <a href="https://www.youtube.com/watch?v=uXDbkIkoSk0" data-fancybox="gallery">
+            <div style="position: relative; display: inline-block;">
+                <div style="overflow: hidden; width: 230px;">
+                    <img src="https://img.youtube.com/vi/uXDbkIkoSk0/maxresdefault.jpg"
+                        style="position: relative; left: -125px; width: 480px;">
+                </div>
+                <i class="fas fa-play" style="position: absolute; top: 50%; left: 50%; transform:
+                    translate(-50%, -50%) scale(4); opacity: 1.0; color: red"></i>
+            </div>
+        </a>
+
+        <a href="https://www.youtube.com/watch?v=nLRTtxrm7z0" data-fancybox="gallery">
+            <div style="position: relative; display: inline-block;">
+                <div style="overflow: hidden; width: 230px;">
+                    <img src="https://img.youtube.com/vi/nLRTtxrm7z0/maxresdefault.jpg"
+                        style="position: relative; left: -125px; width: 480px;">
+                </div>
+                <i class="fas fa-play" style="position: absolute; top: 50%; left: 50%; transform:
+                    translate(-50%, -50%) scale(4); opacity: 1.0; color: red"></i>
+            </div>
+        </a>
+
+        <a href="https://www.youtube.com/watch?v=SzUIuTK63jA" data-fancybox="gallery">
+            <div style="position: relative; display: inline-block;">
+                <div style="overflow: hidden; width: 230px;">
+                    <img src="https://img.youtube.com/vi/SzUIuTK63jA/maxresdefault.jpg"
+                        style="position: relative; left: -125px; width: 480px;">
+                </div>
+                <i class="fas fa-play" style="position: absolute; top: 50%; left: 50%; transform:
+                    translate(-50%, -50%) scale(4); opacity: 1.0; color: red"></i>
+            </div>
+        </a>
+    </div>
+    <!-- <img src="https://img.youtube.com/vi/nLRTtxrm7z0/maxresdefault.jpg" alt="Video Thumbnail"> -->
+    </a>
+
+    <a href="./img/IMG_0328.HEIC.jpg" data-fancybox="gallery"><img class="video-item"
+            src="./img/IMG_0328.HEIC.jpg" /></a>
+    <a href="./img/IMG_0488.HEIC.jpg" data-fancybox="gallery"><img class="video-item"
+            src="./img/IMG_0488.HEIC.jpg" /></a>
+    <a href="./img/IMG_0494.HEIC.jpg" data-fancybox="gallery"><img class="video-item"
+            src="./img/IMG_0494.HEIC.jpg" /></a>
+    <a href="./img/IMG_7415.HEIC.jpg" data-fancybox="gallery"><img class="video-item"
+            src="./img/IMG_7415.HEIC.jpg" /></a>
+    <a href="./img/sweetman_MUD_IMG_2002.JPG" data-fancybox="gallery"><img class="video-item"
+            src="./img/sweetman_MUD_IMG_2002.JPG" /></a>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@fancyapps/ui@5.0/dist/fancybox/fancybox.umd.js"></script>
+    <script>
+        Fancybox.bind("[data-fancybox]", {
+            // Custom options
+        });
+    </script>
+</body>
+
+</html>
