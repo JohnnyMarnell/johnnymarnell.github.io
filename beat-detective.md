@@ -1,6 +1,9 @@
 #### Live Beat Sync with Librosa
 
-[**_Quick Demo Video showing detection and sync_**](https://www.youtube.com/watch?v=wihCkwniqwU)
+<a href="https://www.youtube.com/watch?v=wihCkwniqwU">
+<img src="https://img.youtube.com/vi/wihCkwniqwU/maxresdefault.jpg">
+</a>
+[**_☝🏻START HERE☝🏻: Quick Demo Video showing detection and sync_**](https://www.youtube.com/watch?v=wihCkwniqwU)
 
 [**_See it Live with LEDs_**](./led-art.html)
 
