@@ -34,6 +34,7 @@ at Spotify in the Advertising Business Unit.
 
 - [**Gartrex 9000 Raspberry Pi Mobile Jam Loop Staishe**](https://www.youtube.com/watch?v=gKP3OBteXtg)
   Custom Node.JS looper, quantizer, swing, arranger. Headless REAPER.
+  Custom compiled low latency Linux kernel.
   More info in this video (turn on CC / subtitles) and see description
   [here](https://www.youtube.com/watch?v=gKP3OBteXtg). Have taken this everywhere
   **//** [dive boats](https://www.youtube.com/watch?v=KVO8QH8ydek),
