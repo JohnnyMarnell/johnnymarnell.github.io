@@ -12,7 +12,7 @@ at Spotify in the Advertising Business Unit.
 
 # Some Projects
 
-## Ableton
+## Ableton / DAWs / Music
 
 - [**Ableton Live Realtime Diff**](https://www.youtube.com/watch?v=mulwc2U11o8)
   Did you know Ableton Live Set (`.als`) files were just gzipped XML? ...you did? Well, quit your showboating. This hack surfaces realtime changes to the underlying file as you save
@@ -23,6 +23,23 @@ at Spotify in the Advertising Business Unit.
   <span id="ableton-resticle">Prototype</span> of hacking a `SocketServer` into Ableton's undocumented, unofficial python subsystem and API, for external control (e.g. with a custom web UI)
   **//** [demo vid](https://www.youtube.com/watch?v=xfeG9-BbLko)
   **//** [src](https://github.com/JohnnyMarnell/ableton-control?tab=readme-ov-file)
+
+- [**REAPER / Network control / API**](https://github.com/JohnnyMarnell/j5-reaper)
+  Built a custom Node.JS API to control REAPER. Hacked with Lua and REAPER's
+  proprietary EEL script to successfully get a TCP server with
+  ring buffer read/write working. Have sinced moved to custom API backed
+  by OSC mappings (need to push). That's allowed me to build my Raspberry
+  Pi looper [video](https://www.youtube.com/watch?v=gKP3OBteXtg)
+  [source](https://github.com/JohnnyMarnell/j5-reaper)
+
+- [**Gartrex 9000 Raspberry Pi Mobile Jam Loop Staishe**](https://www.youtube.com/watch?v=gKP3OBteXtg)
+  Custom Node.JS looper, quantizer, swing, arranger. Headless REAPER.
+  More info in this video (turn on CC / subtitles) and see description
+  [here](https://www.youtube.com/watch?v=gKP3OBteXtg). Have taken this everywhere
+  **//** [dive boats](https://www.youtube.com/watch?v=KVO8QH8ydek),
+  **//** [weddings](https://www.youtube.com/watch?v=5gXpDlQAJRI),
+  **//** [playing songs we never have before](https://www.youtube.com/watch?v=5gXpDlQAJRI) and beyond...
+
 
 ## More Audio Hacks
 
