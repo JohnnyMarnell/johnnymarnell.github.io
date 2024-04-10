@@ -37,8 +37,8 @@ at Spotify in the Advertising Business Unit.
   Custom compiled low latency Linux kernel.
   More info in this video (turn on CC / subtitles) and see description
   [here](https://www.youtube.com/watch?v=gKP3OBteXtg). Have taken this everywhere
-  **//** [dive boats](https://www.youtube.com/watch?v=KVO8QH8ydek),
-  **//** [weddings](https://www.youtube.com/watch?v=5gXpDlQAJRI),
+  **//** [dive boats](https://www.youtube.com/watch?v=KVO8QH8ydek)
+  **//** [weddings](https://www.youtube.com/watch?v=5gXpDlQAJRI)
   **//** [playing songs we never have before](https://www.youtube.com/watch?v=5gXpDlQAJRI) and beyond...
 
 
