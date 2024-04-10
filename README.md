@@ -30,7 +30,7 @@ at Spotify in the Advertising Business Unit.
   **//** [src](https://github.com/JohnnyMarnell/ableton-live-realtime-changes)
 
 - [**Ableton Live HTTP REST API**](https://www.youtube.com/watch?v=xfeG9-BbLko)
-  Prototype of hacking a `SocketServer` into Ableton's undocumented, unofficial python subsystem and API, for external control (e.g. with a custom web UI)
+  <span id="ableton-resticle">Prototype</span> of hacking a `SocketServer` into Ableton's undocumented, unofficial python subsystem and API, for external control (e.g. with a custom web UI)
   **//** [demo vid](https://www.youtube.com/watch?v=xfeG9-BbLko)
   **//** [src](https://github.com/JohnnyMarnell/ableton-control?tab=readme-ov-file)
 
