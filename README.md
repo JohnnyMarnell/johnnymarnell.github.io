@@ -14,7 +14,7 @@ at Spotify in the Advertising Business Unit.
 
   Music has always been a big part of my life, and I'm proud to say I've done some cool things with it.
 
-  ⭐️ I co-wrote a [K-Pop record](https://www.youtube.com/watch?v=J2O6NZRLz2k)
+  ⭐️ I co-wrote a [K-Pop record](https://www.youtube.com/watch?v=jXtAs2W5s5k)
      released by mega group [TWICE](https://www.instagram.com/twicetagram/).
      What a journey (listen to the evolution), originally
      [a Doo Wop throwback demo pitch](https://www.youtube.com/watch?v=o2qSVklbBXw)
