@@ -34,9 +34,8 @@ at Spotify in the Advertising Business Unit.
   [Webster Hall in NYC](https://www.youtube.com/watch?v=tTkU9phbEGs).
   Never slept as well as I did on a tour bus!
 
-  [Rockwood Music Hall](https://www.youtube.com/watch?v=GUgVvVJgpOQ)
-  15 year anniversary, March 2020, days
-  before everything changed forever.
+  [Rockwood Music Hall 15 Year Anniversary](https://www.youtube.com/watch?v=GUgVvVJgpOQ),
+  March 2020, days before everything changed forever.
 
 
 # Some Projects
