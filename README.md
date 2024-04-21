@@ -16,8 +16,8 @@ at Spotify in the Advertising Business Unit.
 
   ⭐️ I co-wrote a [K-Pop record](https://www.youtube.com/watch?v=jXtAs2W5s5k)
      released by mega group [TWICE](https://www.instagram.com/twicetagram/).
-     What a journey (listen to the evolution), originally
-     [a Doo Wop throwback demo pitch](https://www.youtube.com/watch?v=o2qSVklbBXw)
+     What a journey (listen to the evolution), originally a
+     [Doo Wop throwback demo pitch](https://www.youtube.com/watch?v=o2qSVklbBXw)
      I wrote with castmates from a Bravo songwriting reality show,
      [Amber Riley of Glee recorded it](https://www.youtube.com/watch?v=tNP8GbRQDXk)
      but it sat for half a decade. ⭐️
@@ -27,12 +27,12 @@ at Spotify in the Advertising Business Unit.
   I won the most challenges on the show,
   including the [road trip one](https://www.youtube.com/watch?v=I48ROsiuTN4)
   **//** [reggae genre](https://www.youtube.com/watch?v=MXgx-s64tTs)
-  **//** and challening Luda' on the
+  **//** and channeling Luda' on the
   [rap one too](https://www.youtube.com/watch?v=AuqssJiLj18) 😂.
 
   I toured with the incredible Ingrid Michaelson, played some huge venues like
   [Webster Hall in NYC](https://www.youtube.com/watch?v=tTkU9phbEGs).
-  Never slept as well as I did on a tour bus!
+  Never slept as well as I did on a tour bus.
 
   [Rockwood Music Hall 15 Year Anniversary](https://www.youtube.com/watch?v=GUgVvVJgpOQ),
   March 2020, days before everything changed forever.
@@ -48,7 +48,7 @@ at Spotify in the Advertising Business Unit.
   **//**  [src](https://github.com/JohnnyMarnell/ableton-live-realtime-changes)
 
 - [**Ableton Live HTTP REST API**](https://www.youtube.com/watch?v=xfeG9-BbLko)
-  Prototype of hacking a `SocketServer` into Ableton's undocumented, unofficial pythonsubsystem and API, for external control (e.g. with a custom web UI)
+  Prototype of hacking a `SocketServer` into Ableton's undocumented, unofficial python-subsystem and API, for external control (e.g. from a custom web UI)
   **//**  [demo vid](https://www.youtube.com/watch?v=xfeG9-BbLko)
   **//**  [src](https://github.com/JohnnyMarnell/ableton-control?tab=readme-ov-file)
 
@@ -80,7 +80,7 @@ at Spotify in the Advertising Business Unit.
 - ⭐️ [**Beat Detective**](/beat-detective.md)
   Live beat and tempo detection and synchronizing using python music ML Librosa powered predictions. [Jupyter notebook](./jupyter/tempo.html), quick [demo vid](https://youtu.be/wihCkwniqwU), plus see it live [here](/led-art.html)
 
-- Coming Soon: Better write= up of my custom Raspberry Pi looper performance rig
+- Coming Soon: Better write-up of my custom Raspberry Pi looper performance rig
 - Coming Soon: ReModi, live jamming over the internet using MIDI over WebRTC / UDP (miraculously playable in
   the heart of quarantine with my best friends, NY <=> NJ <=> NC <=> IL)
 - Coming Soon: Easy to use, custom REAPER API, currently powering [this magic](https://www.youtube.com/watch?v=gKP3OBteXtg)
