@@ -12,6 +12,20 @@ at Spotify in the Advertising Business Unit.
 
 # Some Projects
 
+## Ableton
+
+- [**Ableton Live Realtime Diff**](https://www.youtube.com/watch?v=mulwc2U11o8)
+  Did you know Ableton Live Set (`.als`) files were just gzipped XML? ...you did? Well, quit your showboating. This hack surfaces realtime changes to the underlying file as you save
+  **//** [demo vid](https://www.youtube.com/watch?v=mulwc2U11o8)
+  **//** [src](https://github.com/JohnnyMarnell/ableton-live-realtime-changes)
+
+- [**Ableton Live HTTP REST API**](https://www.youtube.com/watch?v=xfeG9-BbLko)
+  <span id="ableton-resticle">Prototype</span> of hacking a `SocketServer` into Ableton's undocumented, unofficial python subsystem and API, for external control (e.g. with a custom web UI)
+  **//** [demo vid](https://www.youtube.com/watch?v=xfeG9-BbLko)
+  **//** [src](https://github.com/JohnnyMarnell/ableton-control?tab=readme-ov-file)
+
+## More Audio Hacks
+
 - [**10k+ LED Art installation**](/led-art.html)
   Java, Chromatik / LX Studio, Raspberry Pi plus Node.JS UI and python ML beat syncing
 
@@ -23,16 +37,6 @@ at Spotify in the Advertising Business Unit.
 - [**Bass Bounce Visualization**](https://www.youtube.com/watch?v=d0XzIzDG8k0)
   Built automatic audio reactive visualization based on FFT analyzed dynamic signals,
   Java with LX Studio. You can see the bounce start and stop depending on bass thumps
-
-- [**Ableton Live Realtime Diff**](https://www.youtube.com/watch?v=mulwc2U11o8)
-  Did you know Ableton Live Set (`.als`) files were just gzipped XML? ...you did? Well, quit your showboating. This hack surfaces realtime changes to the underlying file as you save
-  **//** [demo vid](https://www.youtube.com/watch?v=mulwc2U11o8)
-  **//** [src](https://github.com/JohnnyMarnell/ableton-live-realtime-changes)
-
-- [**Ableton Live HTTP REST API**](https://www.youtube.com/watch?v=xfeG9-BbLko)
-  Prototype of hacking a `SocketServer` into Ableton's undocumented, unofficial python subsystem and API, for external control (e.g. with a custom web UI)
-  **//** [demo vid](https://www.youtube.com/watch?v=xfeG9-BbLko)
-  **//** [src](https://github.com/JohnnyMarnell/ableton-control?tab=readme-ov-file)
 
 - [**Spotify Quarantine Halloween**](https://www.instagram.com/p/CG-u44ElvNk11U1LTU6wTNDM25x7Km-Vq7ns6o0)
   My band plus some teammates made a silly _"Hungry Like the Wolf"_ video
