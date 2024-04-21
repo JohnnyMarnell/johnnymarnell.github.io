@@ -1,4 +1,4 @@
-#### TEST3 Live Beat Sync with Librosa
+#### Live Beat Sync with Librosa
 
 <a href="https://www.youtube.com/watch?v=wihCkwniqwU">
 <img src="https://img.youtube.com/vi/wihCkwniqwU/maxresdefault.jpg">

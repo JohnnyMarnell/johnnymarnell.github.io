@@ -74,11 +74,11 @@ at Spotify in the Advertising Business Unit.
 
 ## More Audio Hacks
 
-- ⭐️ [**10k+ LED Art installation**](/led-art.html)
+- ⭐️ [**10k+ LED Art installation**](/led-art)
   Java, Chromatik / LX Studio, Raspberry Pi plus Node.JS UI and python ML beat syncing
 
 - ⭐️ [**Beat Detective**](/beat-detective.md)
-  Live beat and tempo detection and synchronizing using python music ML Librosa powered predictions. [Jupyter notebook](./jupyter/tempo.html), quick [demo vid](https://youtu.be/wihCkwniqwU), plus see it live [here](/led-art.html)
+  Live beat and tempo detection and synchronizing using python music ML Librosa powered predictions. [Jupyter notebook](./jupyter/tempo), quick [demo vid](https://youtu.be/wihCkwniqwU), plus see it live [here](/led-art)
 
 - Coming Soon: Better write-up of my custom Raspberry Pi looper performance rig
 - Coming Soon: ReModi, live jamming over the internet using MIDI over WebRTC / UDP (miraculously playable in
