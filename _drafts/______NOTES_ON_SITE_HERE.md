@@ -24,3 +24,4 @@
     - thumbnail spacing all wrong
     - masonry?
     - i'd like the proper markdown / SSG to do this magic, i give it a list of youtube URLs and IMG files, and it tiles them, lightbox gallery as wellery.
+- newer machine: `brew install ruby ; bundle install `, plus had to add to Gemfile
