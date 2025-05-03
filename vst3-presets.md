@@ -12,15 +12,16 @@ An older, (slightly?) less standard preset format I see is `.fxp`. I've seen
 at least both the great free, OSS [Surge XT Synth](https://surge-synthesizer.github.io/)
 and [Leapwing](https://www.leapwingaudio.com/) plugins using them.
 
-Using an awesome repo from [janminor](https://github.com/janminor), I was able
-to modify it to convert `.fxp` to `.vstpreset`,
-my code [here](https://github.com/JohnnyMarnell/python-vstpreset/blob/main/fxptovst3.py).
+Using invaluable work from [janminor](https://github.com/janminor),
+and [demberto](https://github.com/demberto/fxp), I was able
+to add conversion from `.fxp` to `.vstpreset`,
+most of my code [here](https://github.com/JohnnyMarnell/python-vstpreset/blob/main/fxptovst3.py).
 
-I was able to port all ~3.3k of the wonderful presets bundled with the amazing
-[Surge XT Synth](https://surge-synthesizer.github.io/), posted here:
+Here's all ~3.3k of the wonderful presets bundled with the amazing
+[Surge XT Synth](https://surge-synthesizer.github.io/):
 
 > 🎵🤖 <br/>
-> [**_surge-xt-fxp-to-vstpreset.7z_**](https://drive.google.com/file/d/13lhBb1NAENP85y7drFsfbrZsr9Wy_EWq/view?usp=drive_link)
+> Download: [**_surge-xt-fxp-to-vstpreset.7z_**](https://drive.google.com/file/d/13lhBb1NAENP85y7drFsfbrZsr9Wy_EWq/view?usp=drive_link)
 >
 
 #### To-Do:
