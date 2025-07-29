@@ -1,0 +1,9 @@
+---
+---
+
+@import "{{ site.theme }}";
+
+/* Hide GitHub button */
+.btn-github {
+  display: none !important;
+}

@@ -1,26 +1,25 @@
-# Johnny Marnell
-
 👋🏻 Hey friend, welcome to my super-WiP, barest of the bones 🦴
-GitHub pages site.
+GitHub pages site on the world wide interwebs.
 
-🎵❤️🤖 I'm a lover of all things music and technology, and their intersection.
-I have a ton of hack projects I've started documenting here,
-thanks for taking a look!
+🎵 ❤️ 🤖  I'm a lover of all things music and technology,
+and their intersection. I have a ton of hack projects
+I've started documenting here, thanks for taking a gander 🪿
 
-👷🏻 Professionally wise, I most recently worked as a Staff Engineer
-at Spotify in the Advertising Business Unit.
+👷🏻 Professionally wise: I most recently worked as a Staff Engineer
+at Spotify in the Advertising Business Unit, did the 0️⃣-1️⃣ Founding Engineer thing at a stealth startup in AI powered 3D / Spatial Audio, and now I'm a Staff Backend Engineer at [Air Labs](https://air.inc).
 
 # Music
 
   Music has always been a big part of my life, and I'm proud to say I've done some cool things with it.
 
-  ⭐️ I co-wrote a [K-Pop record](https://www.youtube.com/watch?v=jXtAs2W5s5k)
+  ⭐️ I co-wrote this ➡️ [K-Pop record](https://www.youtube.com/watch?v=jXtAs2W5s5k) ⬅️
      released by mega group [TWICE](https://www.instagram.com/twicetagram/).
-     What a journey (listen to the evolution), originally a
-     [Doo Wop throwback demo pitch](https://www.youtube.com/watch?v=o2qSVklbBXw)
-     I wrote with castmates from a Bravo songwriting reality show,
-     [Amber Riley of Glee recorded it](https://www.youtube.com/watch?v=tNP8GbRQDXk)
-     but it sat for half a decade. ⭐️
+     What a journey this was, listen to the evolution here:
+
+  - Our original
+     [Doo Wop throwback demo pitch](https://www.youtube.com/watch?v=o2qSVklbBXw), co-written with castmates from the Bravo songwriting reality show I did
+  - Amber Riley of Glee also [recorded it](https://www.youtube.com/watch?v=tNP8GbRQDXk), but it sat for half a decade
+  - Then JYP Records re-wrote the [lyrics in Korean](https://www.youtube.com/watch?v=jXtAs2W5s5k) ⭐️
   
   I was on a
   [Bravo TV reality show for songwriting](https://www.bravotv.com/platinum-hit).
@@ -42,6 +41,16 @@ at Spotify in the Advertising Business Unit.
 
 ## Ableton / DAWs / Music
 
+- ⭐️ [**Gartrex 9000 Raspberry Pi Mobile Jam Loop Staishe**](https://www.youtube.com/watch?v=gKP3OBteXtg)
+  Custom Node.JS looper, quantizer, swing, arranger. Headless REAPER.
+  Custom compiled low latency Linux kernel.
+  More info in this video (turn on CC / subtitles) and see description
+  [here live from Mexico](https://www.youtube.com/watch?v=gKP3OBteXtg).
+  Have taken this all over the world:
+         [dive boats](https://www.youtube.com/watch?v=KVO8QH8ydek)
+  **//** [weddings](https://www.youtube.com/watch?v=5gXpDlQAJRI)
+  **//** [playing songs we never have before](https://www.youtube.com/watch?v=5gXpDlQAJRI) and beyond...
+
 - [**Ableton Live Realtime Diff**](https://www.youtube.com/watch?v=mulwc2U11o8)
   Did you know Ableton Live Set (`.als`) files were just gzipped XML? ...you did? Well, quit your showboating. This hack surfaces realtime changes to the underlying file as you save
   **//**  [demo vid](https://www.youtube.com/watch?v=mulwc2U11o8)
@@ -60,16 +69,6 @@ at Spotify in the Advertising Business Unit.
   Pi looper
           [video](https://www.youtube.com/watch?v=gKP3OBteXtg)
   **//**  [source](https://github.com/JohnnyMarnell/j5-reaper)
-
-- ⭐️ [**Gartrex 9000 Raspberry Pi Mobile Jam Loop Staishe**](https://www.youtube.com/watch?v=gKP3OBteXtg)
-  Custom Node.JS looper, quantizer, swing, arranger. Headless REAPER.
-  Custom compiled low latency Linux kernel.
-  More info in this video (turn on CC / subtitles) and see description
-  [here live from Mexico](https://www.youtube.com/watch?v=gKP3OBteXtg).
-  Have taken this all over the world:
-         [dive boats](https://www.youtube.com/watch?v=KVO8QH8ydek)
-  **//** [weddings](https://www.youtube.com/watch?v=5gXpDlQAJRI)
-  **//** [playing songs we never have before](https://www.youtube.com/watch?v=5gXpDlQAJRI) and beyond...
 
 
 ## More Audio Hacks

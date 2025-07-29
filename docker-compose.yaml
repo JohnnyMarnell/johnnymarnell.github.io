@@ -1,0 +1,18 @@
+services:
+  jekyll:
+    image: jekyll/jekyll:4
+    platform: linux/amd64  # Run under Rosetta 2 on Apple Silicon
+    container_name: johnnymarnell-site
+    command: jekyll serve --watch --force_polling --livereload --incremental
+    ports:
+      - "4000:4000"
+      - "35729:35729"  # LiveReload port
+    volumes:
+      - .:/srv/jekyll
+      - jekyll_bundle:/usr/local/bundle
+    environment:
+      - JEKYLL_ENV=development
+      - PAGES_REPO_NWO=JohnnyMarnell/johnnymarnell.github.io
+
+volumes:
+  jekyll_bundle:

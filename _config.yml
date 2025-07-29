@@ -1,0 +1,43 @@
+# Site settings
+title: johnny-marnell
+description: all things music and tech
+baseurl: "/" # the subpath of your site, e.g. /blog
+url: "https://johnny-marnell.github.io" # the base hostname & protocol for your site
+
+# Theme selection - uncomment the theme you want to use
+# GitHub Pages supported themes:
+#theme: minima
+# theme: jekyll-theme-cayman
+# theme: jekyll-theme-slate
+# theme: jekyll-theme-merlot
+# theme: jekyll-theme-time-machine
+# theme: jekyll-theme-minimal
+# theme: jekyll-theme-leap-day
+# theme: jekyll-theme-modernist
+theme: jekyll-theme-hacker
+# theme: jekyll-theme-midnight
+
+# theme: jekyll-theme-arschitect
+# theme: jekyll-theme-tactile
+# theme: jekyll-theme-dinky
+
+# Remote themes (also supported by GitHub Pages)
+# remote_theme: pages-themes/cayman@v0.2.0
+# remote_theme: pages-themes/minimal@v0.2.0
+
+# Hacker theme config - hide GitHub button
+show_downloads: false
+github:
+  is_project_page: false
+
+# Build settings
+plugins:
+  - jekyll-feed
+  - jekyll-remote-theme # Required for remote themes
+
+# Exclude from processing
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - node_modules/
+  - vendor/
