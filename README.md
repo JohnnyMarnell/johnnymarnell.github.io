@@ -79,10 +79,12 @@ at Spotify in the Advertising Business Unit, did the 0️⃣-1️⃣ Founding En
 - ⭐️ [**Beat Detective**](/beat-detective.md)
   Live beat and tempo detection and synchronizing using python music ML Librosa powered predictions. [Jupyter notebook](./jupyter/tempo), quick [demo vid](https://youtu.be/wihCkwniqwU), plus see it live [here](/led-art)
 
-- Coming Soon: Better write-up of my custom Raspberry Pi looper performance rig
-- Coming Soon: ReModi, live jamming over the internet using MIDI over WebRTC / UDP (miraculously playable in
+- Post Coming Soon: Better write-up of my custom Raspberry Pi looper performance rig
+
+- Post Coming Soon: ReModi, live jamming over the internet using MIDI over WebRTC / UDP (miraculously playable in
   the heart of quarantine with my best friends, NY <=> NJ <=> NC <=> IL)
-- Coming Soon: Easy to use, custom REAPER API, currently powering [this magic](https://www.youtube.com/watch?v=gKP3OBteXtg)
+
+- Post Coming Soon: Easy to use, custom REAPER API, currently powering [this magic](https://www.youtube.com/watch?v=gKP3OBteXtg)
 
 - [**Bass Bounce Visualization**](https://www.youtube.com/watch?v=d0XzIzDG8k0)
   Built automatic audio reactive visualization based on FFT analyzed dynamic signals,
@@ -102,11 +104,11 @@ at Spotify in the Advertising Business Unit, did the 0️⃣-1️⃣ Founding En
   I own both the [Jamstik Studio](https://jamstik.com/) guitar and the [Fishman TriplePlay](https://www.fishman.com/tripleplay/) pickup. This [video](https://www.youtube.com/watch?v=zNkmwI8Ubqs)
   is a zany quick one experimenting with the latter plus a fun orchestral patch that varies instruments depending on velocity and note range (e.g. timpani hit accents added when loud, different horn sections at higher registers). (...It was height of quarantine, please excuse the Snap filter cat lasers 😂).
 
-- Coming Soon: Intelligent live use of MIDI guitar
+- Post Coming Soon: Intelligent live use of MIDI guitar
 
-- Coming Soon: How I'm approaching this site's code, improvements (it's so beautiful for starters, isn't it?...)
+- Post Coming Soon: How I'm approaching this site's code, improvements (it's so beautiful for starters, isn't it?...)
 
-- Coming Soon (I hope 🤞🏻): Massive backlog
+- Post Coming Soon (I hope 🤞🏻): Massive backlog, all these "coming soon"erisms...
 
 # Connect With Me
 
