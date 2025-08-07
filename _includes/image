@@ -1,0 +1,31 @@
+{% comment %}
+  Simplified image include with fuzzy matching support
+  Can pass full path or partial filename
+{% endcomment %}
+
+{% assign img_path = "" %}
+
+{% comment %} Check if it's already a full path {% endcomment %}
+{% if include.src contains "/" or include.src contains "." %}
+  {% assign img_path = include.src %}
+{% else %}
+  {% comment %} Fuzzy match - find image containing the pattern {% endcomment %}
+  {% assign search_pattern = include.src | downcase %}
+  {% for file in site.static_files %}
+    {% if file.path contains "/img/" %}
+      {% assign filename_lower = file.name | downcase %}
+      {% if filename_lower contains search_pattern %}
+        {% assign img_path = file.path %}
+        {% break %}
+      {% endif %}
+    {% endif %}
+  {% endfor %}
+{% endif %}
+
+{% if img_path != "" %}
+<a href="{{ img_path }}" data-fancybox="gallery">
+  <img class="image-item" src="{{ img_path }}" alt="{{ include.alt | default: 'Image' }}" />
+</a>
+{% else %}
+  <!-- Image not found for pattern: {{ include.src }} -->
+{% endif %}

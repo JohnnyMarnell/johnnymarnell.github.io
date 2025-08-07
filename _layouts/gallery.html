@@ -1,0 +1,146 @@
+---
+layout: default
+---
+<style>
+    .gallery, .masonry-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 20px;
+        margin-top: 30px;
+    }
+
+    @media (min-width: 768px) {
+        .gallery, .masonry-container {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+
+    @media (min-width: 1024px) {
+        .gallery, .masonry-container {
+            grid-template-columns: repeat(3, 1fr);
+        }
+    }
+
+    .video-item, .image-item {
+        width: 100%;
+        height: auto;
+        border-radius: 4px;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+    }
+
+    .video-thumbnail {
+        position: relative;
+        display: block;
+        overflow: hidden;
+        border-radius: 4px;
+        aspect-ratio: 16/9;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+    }
+
+    .video-thumbnail img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .video-thumbnail .play-icon {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 3em;
+        /* Use the link color from the theme */
+        color: var(--link-color, #63c0f5);
+        text-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
+        transition: transform 0.2s;
+    }
+
+    .video-thumbnail:hover .play-icon {
+        transform: translate(-50%, -50%) scale(1.2);
+    }
+
+    .vertical-video .video-thumbnail {
+        aspect-ratio: 9/16;
+        max-width: 300px;
+        margin: 0 auto;
+    }
+
+    @media (max-width: 767px) {
+        .gallery, .masonry-container {
+            grid-template-columns: 1fr;
+        }
+        
+        .vertical-video .video-thumbnail {
+            max-width: 100%;
+            max-height: 400px;
+            aspect-ratio: auto;
+        }
+        
+        .vertical-video .video-thumbnail img {
+            max-height: 400px;
+            width: auto;
+            margin: 0 auto;
+            display: block;
+        }
+    }
+
+    /* Theme-aware styles */
+    h1, h2, h3 {
+        /* These will inherit from the theme automatically */
+    }
+
+    a.video-thumbnail:hover {
+        /* Use theme's link hover behavior */
+        text-decoration: none;
+    }
+</style>
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/ui@5.0/dist/fancybox/fancybox.css" />
+<script src="https://kit.fontawesome.com/d7aa9388b3.js" crossorigin="anonymous"></script>
+
+{{ content }}
+
+<script src="https://cdn.jsdelivr.net/npm/@fancyapps/ui@5.0/dist/fancybox/fancybox.umd.js"></script>
+<script>
+    // Set theme-aware color for play icons
+    document.addEventListener('DOMContentLoaded', function() {
+        // Try to detect theme's primary color from existing links
+        const link = document.querySelector('a');
+        if (link) {
+            const linkStyle = window.getComputedStyle(link);
+            const linkColor = linkStyle.color;
+            document.documentElement.style.setProperty('--link-color', linkColor);
+        }
+        
+        // Auto-detect vertical videos using YouTube oEmbed API
+        document.querySelectorAll('.video-thumbnail[data-youtube-id]').forEach(async (element) => {
+            const videoId = element.dataset.youtubeId;
+            try {
+                // Using noembed.com as a CORS-friendly proxy for YouTube oEmbed
+                const response = await fetch(`https://noembed.com/embed?url=https://www.youtube.com/watch?v=${videoId}`);
+                const data = await response.json();
+                
+                if (data.height > data.width) {
+                    // It's vertical! Update the element
+                    element.dataset.width = "640";
+                    element.dataset.height = "1138";
+                    const container = element.parentElement;
+                    if (!container.classList.contains('vertical-video')) {
+                        const wrapper = document.createElement('div');
+                        wrapper.className = 'vertical-video';
+                        container.insertBefore(wrapper, element);
+                        wrapper.appendChild(element);
+                    }
+                }
+            } catch (e) {
+                console.log('Could not fetch video metadata for', videoId);
+            }
+        });
+    });
+
+    Fancybox.bind("[data-fancybox]", {
+        Hash: false,
+        closeExisting: true,
+        infinite: true
+    });
+</script>

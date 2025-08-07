@@ -1,0 +1,29 @@
+{% comment %}
+  Simplified video include - just pass the YouTube ID directly
+  Client-side JavaScript will auto-detect vertical videos
+{% endcomment %}
+
+{% assign video_id = include.id | replace: 'https://www.youtube.com/watch?v=', '' | replace: 'https://youtu.be/', '' %}
+
+{% if include.vertical %}
+<div class="vertical-video">
+  <a href="https://www.youtube.com/watch?v={{ video_id }}" 
+     data-fancybox="gallery" 
+     data-youtube-id="{{ video_id }}"
+     data-width="640" data-height="1138"
+     class="video-thumbnail">
+    <img src="https://img.youtube.com/vi/{{ video_id }}/maxresdefault.jpg" 
+         alt="{{ include.alt | default: 'Video' }}">
+    <i class="fas fa-play play-icon"></i>
+  </a>
+</div>
+{% else %}
+<a href="https://www.youtube.com/watch?v={{ video_id }}" 
+   data-fancybox="gallery"
+   data-youtube-id="{{ video_id }}"
+   class="video-thumbnail">
+  <img src="https://img.youtube.com/vi/{{ video_id }}/maxresdefault.jpg" 
+       alt="{{ include.alt | default: 'Video' }}">
+  <i class="fas fa-play play-icon"></i>
+</a>
+{% endif %}

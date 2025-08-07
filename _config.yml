@@ -34,6 +34,7 @@ github:
 plugins:
   - jekyll-feed
   - jekyll-remote-theme # Required for remote themes
+  - jekyll-redirect-from # For handling legacy URLs
 
 # Exclude from processing
 exclude:
