@@ -4,38 +4,104 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>LEDs</title>
+    <title>LEDs - johnny-marnell</title>
+    <link rel="stylesheet" href="/assets/css/style.css">
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f4f4;
-            margin: 20px;
-        }
-
-        .video-container {
-            width: 1280px;
-            display: flex;
-            flex-wrap: wrap;
+        .masonry-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
             gap: 20px;
+            margin-top: 30px;
         }
 
-        #summary {
-            width: 1000px;
+        @media (min-width: 768px) {
+            .masonry-container {
+                grid-template-columns: repeat(2, 1fr);
+            }
         }
 
-        .video-item {
-            width: 350px;
-            margin-bottom: 20px;
+        @media (min-width: 1024px) {
+            .masonry-container {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        .video-item, .image-item {
+            width: 100%;
+            height: auto;
+            border-radius: 4px;
+            border: 1px solid rgba(181, 232, 83, 0.2);
+        }
+
+        .video-thumbnail {
+            position: relative;
+            display: block;
+            overflow: hidden;
+            border-radius: 4px;
+            aspect-ratio: 16/9;
+        }
+
+        .video-thumbnail img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .video-thumbnail .play-icon {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 3em;
+            color: #b5e853;
+            text-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
+            transition: transform 0.2s;
+        }
+
+        .video-thumbnail:hover .play-icon {
+            transform: translate(-50%, -50%) scale(1.2);
+        }
+
+        .vertical-video .video-thumbnail {
+            aspect-ratio: 9/16;
+            max-width: 300px;
+            margin: 0 auto;
+        }
+
+        @media (max-width: 767px) {
+            .masonry-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .vertical-video .video-thumbnail {
+                max-width: 100%;
+                max-height: 400px;
+                aspect-ratio: auto;
+            }
+            
+            .vertical-video .video-thumbnail img {
+                max-height: 400px;
+                width: auto;
+                margin: 0 auto;
+                display: block;
+            }
         }
     </style>
-
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/ui@5.0/dist/fancybox/fancybox.css" />
     <script src="https://kit.fontawesome.com/d7aa9388b3.js" crossorigin="anonymous"></script>
 </head>
 
 <body>
-    <div id="summary">
-        <h1>LEDs</h1>
+    <header>
+        <div class="container">
+            <h1>johnny-marnell</h1>
+            <h2>all things music and tech</h2>
+        </div>
+    </header>
+
+    <div class="container">
+        <section id="main_content">
+            <h1>LEDs</h1>
         <p>
             I went to Burning Man for the first time in 2023. The camp I joined had begun an impressive LED light
             installation the year prior and were hoping to improve upon it.
@@ -71,103 +137,80 @@
             I even wrote a custom webapp to control it over wifi from our phones.
             The overall effect was truly stunning, and we were so happy (and proud) to be contributing to the art there.
         </p>
-    </div>
 
-    <div class="video-container">
+            <div class="masonry-container">
         <!-- <div class="video-item"> -->
         <!-- idk about this ... width="100%" -->
         <!-- <iframe width="350" height="200" src="https://www.youtube.com/embed/qo0L7gmySvQ" frameborder="0" -->
         <!-- allowfullscreen></iframe> -->
         <!-- </div> -->
 
-        <a href="https://www.youtube.com/watch?v=qo0L7gmySvQ" data-fancybox="gallery">
-            <div style="position: relative; display: inline-block;">
-                <div style="overflow: hidden; width: 350px; height: 200px">
-                    <img src="https://img.youtube.com/vi/qo0L7gmySvQ/maxresdefault.jpg"
-                        style="position: relative; top: -50px; width: 480px;">
-                </div>
-                <i class="fas fa-play" style="position: absolute; top: 50%; left: 50%; transform:
-                    translate(-50%, -50%) scale(4); opacity: 1.0; color: red"></i>
-            </div>
-        </a>
+                <a href="https://www.youtube.com/watch?v=qo0L7gmySvQ" data-fancybox="gallery" class="video-thumbnail">
+                    <img src="https://img.youtube.com/vi/qo0L7gmySvQ/maxresdefault.jpg" alt="LED animation video">
+                    <i class="fas fa-play play-icon"></i>
+                </a>
 
-        <a href="https://www.youtube.com/watch?v=C8sHgpCKFPA" data-fancybox="gallery">
-            <div style="position: relative; display: inline-block;">
-                <div style="overflow: hidden; width: 350px; height: 200px">
-                    <img src="https://img.youtube.com/vi/C8sHgpCKFPA/maxresdefault.jpg"
-                        style="position: relative; top: -50px; width: 480px;">
-                </div>
-                <i class="fas fa-play" style="position: absolute; top: 50%; left: 50%; transform:
-                    translate(-50%, -50%) scale(4); opacity: 1.0; color: red"></i>
-            </div>
-        </a>
+                <a href="https://www.youtube.com/watch?v=C8sHgpCKFPA" data-fancybox="gallery" class="video-thumbnail">
+                    <img src="https://img.youtube.com/vi/C8sHgpCKFPA/maxresdefault.jpg" alt="LED animation video">
+                    <i class="fas fa-play play-icon"></i>
+                </a>
 
-        <a href="https://www.youtube.com/watch?v=UL10vjc54Lw" data-fancybox="gallery">
-            <div style="position: relative; display: inline-block;">
-                <div style="overflow: hidden; width: 350px; height: 200px">
-                    <img src="https://img.youtube.com/vi/UL10vjc54Lw/maxresdefault.jpg"
-                        style="position: relative; top: -50px; width: 480px;">
-                </div>
-                <i class="fas fa-play" style="position: absolute; top: 50%; left: 50%; transform:
-                    translate(-50%, -50%) scale(4); opacity: 1.0; color: red"></i>
-            </div>
-        </a>
+                <a href="https://www.youtube.com/watch?v=UL10vjc54Lw" data-fancybox="gallery" class="video-thumbnail">
+                    <img src="https://img.youtube.com/vi/UL10vjc54Lw/maxresdefault.jpg" alt="LED animation video">
+                    <i class="fas fa-play play-icon"></i>
+                </a>
 
         <!-- <div class="video-item"><iframe width="100%" height="200" src="https://www.youtube.com/embed/nLRTtxrm7z0" frameborder="0" allowfullscreen></iframe></div> -->
         <!-- <div class="video-item"><iframe width="100%" height="200" src="https://www.youtube.com/embed/SzUIuTK63jA" frameborder="0" allowfullscreen></iframe></div> -->
 
-        <a href="https://www.youtube.com/watch?v=uXDbkIkoSk0" data-fancybox="gallery">
-            <div style="position: relative; display: inline-block;">
-                <div style="overflow: hidden; width: 230px;">
-                    <img src="https://img.youtube.com/vi/uXDbkIkoSk0/maxresdefault.jpg"
-                        style="position: relative; left: -125px; width: 480px;">
+                <div class="vertical-video">
+                    <a href="https://www.youtube.com/watch?v=uXDbkIkoSk0" data-fancybox="gallery" class="video-thumbnail">
+                        <img src="https://img.youtube.com/vi/uXDbkIkoSk0/maxresdefault.jpg" alt="LED animation video">
+                        <i class="fas fa-play play-icon"></i>
+                    </a>
                 </div>
-                <i class="fas fa-play" style="position: absolute; top: 50%; left: 50%; transform:
-                    translate(-50%, -50%) scale(4); opacity: 1.0; color: red"></i>
-            </div>
-        </a>
 
-        <a href="https://www.youtube.com/watch?v=nLRTtxrm7z0" data-fancybox="gallery">
-            <div style="position: relative; display: inline-block;">
-                <div style="overflow: hidden; width: 230px;">
-                    <img src="https://img.youtube.com/vi/nLRTtxrm7z0/maxresdefault.jpg"
-                        style="position: relative; left: -125px; width: 480px;">
+                <div class="vertical-video">
+                    <a href="https://www.youtube.com/watch?v=nLRTtxrm7z0" data-fancybox="gallery" class="video-thumbnail">
+                        <img src="https://img.youtube.com/vi/nLRTtxrm7z0/maxresdefault.jpg" alt="LED animation video">
+                        <i class="fas fa-play play-icon"></i>
+                    </a>
                 </div>
-                <i class="fas fa-play" style="position: absolute; top: 50%; left: 50%; transform:
-                    translate(-50%, -50%) scale(4); opacity: 1.0; color: red"></i>
-            </div>
-        </a>
 
-        <a href="https://www.youtube.com/watch?v=SzUIuTK63jA" data-fancybox="gallery">
-            <div style="position: relative; display: inline-block;">
-                <div style="overflow: hidden; width: 230px;">
-                    <img src="https://img.youtube.com/vi/SzUIuTK63jA/maxresdefault.jpg"
-                        style="position: relative; left: -125px; width: 480px;">
+                <div class="vertical-video">
+                    <a href="https://www.youtube.com/watch?v=SzUIuTK63jA" data-fancybox="gallery" class="video-thumbnail">
+                        <img src="https://img.youtube.com/vi/SzUIuTK63jA/maxresdefault.jpg" alt="LED animation video">
+                        <i class="fas fa-play play-icon"></i>
+                    </a>
                 </div>
-                <i class="fas fa-play" style="position: absolute; top: 50%; left: 50%; transform:
-                    translate(-50%, -50%) scale(4); opacity: 1.0; color: red"></i>
-            </div>
-        </a>
-    </div>
-    <!-- <img src="https://img.youtube.com/vi/nLRTtxrm7z0/maxresdefault.jpg" alt="Video Thumbnail"> -->
-    </a>
 
-    <a href="./img/IMG_0328.HEIC.jpg" data-fancybox="gallery"><img class="video-item"
-            src="./img/IMG_0328.HEIC.jpg" /></a>
-    <a href="./img/IMG_0488.HEIC.jpg" data-fancybox="gallery"><img class="video-item"
-            src="./img/IMG_0488.HEIC.jpg" /></a>
-    <a href="./img/IMG_0494.HEIC.jpg" data-fancybox="gallery"><img class="video-item"
-            src="./img/IMG_0494.HEIC.jpg" /></a>
-    <a href="./img/IMG_7415.HEIC.jpg" data-fancybox="gallery"><img class="video-item"
-            src="./img/IMG_7415.HEIC.jpg" /></a>
-    <a href="./img/sweetman_MUD_IMG_2002.JPG" data-fancybox="gallery"><img class="video-item"
-            src="./img/sweetman_MUD_IMG_2002.JPG" /></a>
+                <a href="./img/IMG_0328.HEIC.jpg" data-fancybox="gallery">
+                    <img class="image-item" src="./img/IMG_0328.HEIC.jpg" alt="LED installation photo" />
+                </a>
+                <a href="./img/IMG_0488.HEIC.jpg" data-fancybox="gallery">
+                    <img class="image-item" src="./img/IMG_0488.HEIC.jpg" alt="LED installation photo" />
+                </a>
+                <a href="./img/IMG_0494.HEIC.jpg" data-fancybox="gallery">
+                    <img class="image-item" src="./img/IMG_0494.HEIC.jpg" alt="LED installation photo" />
+                </a>
+                <a href="./img/IMG_7415.HEIC.jpg" data-fancybox="gallery">
+                    <img class="image-item" src="./img/IMG_7415.HEIC.jpg" alt="LED installation photo" />
+                </a>
+                <a href="./img/sweetman_MUD_IMG_2002.JPG" data-fancybox="gallery">
+                    <img class="image-item" src="./img/sweetman_MUD_IMG_2002.JPG" alt="LED installation photo" />
+                </a>
+            </div>
+        </section>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@fancyapps/ui@5.0/dist/fancybox/fancybox.umd.js"></script>
     <script>
         Fancybox.bind("[data-fancybox]", {
-            // Custom options
+            // Prevent navigation on close
+            Hash: false,
+            // Additional options to ensure smooth closing
+            closeExisting: true,
+            infinite: true
         });
     </script>
 </body>
