@@ -36,11 +36,29 @@ layout: default
         aspect-ratio: 16/9;
         border: 1px solid rgba(255, 255, 255, 0.15);
     }
+    
+    .video-thumbnail-vertical {
+        aspect-ratio: 9/16 !important;
+        overflow: hidden !important; /* Critical for cropping */
+        position: relative; /* Contain the absolute positioned img */
+    }
 
     .video-thumbnail img {
         width: 100%;
         height: 100%;
         object-fit: cover;
+    }
+    
+    /* Crop horizontal YouTube thumbnails to show vertical portion */
+    .video-thumbnail-vertical img {
+        position: absolute !important;
+        width: auto !important;
+        height: 100% !important;
+        left: 50% !important;
+        transform: translateX(-50%) !important;
+        /* YouTube maxres thumbnails are 1280x720, we want center 405x720 portion */
+        min-width: 177.78% !important; /* Force width to be wide enough */
+        object-fit: initial !important; /* Override the cover from base rule */
     }
 
     .video-thumbnail .play-icon {
@@ -59,10 +77,15 @@ layout: default
         transform: translate(-50%, -50%) scale(1.2);
     }
 
+    .vertical-video {
+        display: flex;
+        justify-content: center;
+    }
+
     .vertical-video .video-thumbnail {
         aspect-ratio: 9/16;
-        max-width: 300px;
-        margin: 0 auto;
+        width: 100%;
+        max-width: 400px;
     }
 
     @media (max-width: 767px) {
@@ -70,17 +93,23 @@ layout: default
             grid-template-columns: 1fr;
         }
         
+        /* On mobile, keep vertical but limit height */
         .vertical-video .video-thumbnail {
+            aspect-ratio: 9/16;
             max-width: 100%;
             max-height: 400px;
-            aspect-ratio: auto;
+            overflow: hidden !important;
         }
         
         .vertical-video .video-thumbnail img {
-            max-height: 400px;
-            width: auto;
-            margin: 0 auto;
-            display: block;
+            /* Keep the cropping behavior from desktop */
+            position: absolute !important;
+            width: auto !important;
+            height: 100% !important;
+            left: 50% !important;
+            transform: translateX(-50%) !important;
+            min-width: 177.78% !important;
+            object-fit: initial !important;
         }
     }
 
@@ -122,13 +151,15 @@ layout: default
                 
                 if (data.height > data.width) {
                     // It's vertical! Update the element
+                    element.classList.add('video-thumbnail-vertical');
                     element.dataset.width = "640";
                     element.dataset.height = "1138";
-                    const container = element.parentElement;
-                    if (!container.classList.contains('vertical-video')) {
+                    
+                    // Wrap in vertical-video div if not already wrapped
+                    if (!element.parentElement.classList.contains('vertical-video')) {
                         const wrapper = document.createElement('div');
                         wrapper.className = 'vertical-video';
-                        container.insertBefore(wrapper, element);
+                        element.parentElement.insertBefore(wrapper, element);
                         wrapper.appendChild(element);
                     }
                 }
