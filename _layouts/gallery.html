@@ -94,9 +94,19 @@ layout: default
             grid-auto-rows: 200px;
         }
         
-        /* On mobile, vertical videos still span 2 rows */
+        /* On mobile, letterbox vertical videos to 1 row */
         .vertical-video {
-            grid-row: span 2;
+            grid-row: span 1; /* Same height as horizontal videos */
+        }
+        
+        /* Reset the cropping - show full thumbnail letterboxed */
+        .vertical-video .video-thumbnail img {
+            position: static;
+            width: 100%;
+            height: 100%;
+            transform: none;
+            object-fit: contain; /* Letterbox */
+            background: black; /* Black bars */
         }
     }
 
