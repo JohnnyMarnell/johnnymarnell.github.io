@@ -24,6 +24,7 @@ I also ported the [Pixelblaze](https://electromage.com/pixelblaze/) universe to 
 I even wrote a custom webapp to control it over wifi from our phones. The overall effect was truly stunning, and we were so happy (and proud) to be contributing to the art there.
 
 <div class="gallery">
+{% include video id="Kg0VKvDbvkU" alt="LEDs + RaspberryPi Alexander Jamilton" %}
 {% include video id="n92QxOXHpaI" alt="LED curtain Brototype WiFi ArtNet Pixelblaze experiment" %}
 {% include video id="qo0L7gmySvQ" alt="LED ceiling animation" %}
 {% include video id="C8sHgpCKFPA" alt="LED patterns demo" %}
