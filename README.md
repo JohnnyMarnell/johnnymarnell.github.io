@@ -6,7 +6,7 @@ and their intersection. I have a ton of hack projects
 I've started documenting here, thanks for taking a gander 🪿
 
 👷🏻 Professionally wise: I most recently worked as a Staff Engineer
-at Spotify in the Advertising Business Unit, did the 0️⃣-1️⃣ Founding Engineer thing at a stealth startup in AI powered 3D / Spatial Audio, and now I'm a Staff Backend Engineer at [Air Labs](https://air.inc).
+at Spotify in the Advertising Business Unit, and did the 0️⃣-1️⃣ Founding Engineer thing at a stealth startup in AI powered 3D / Spatial Audio.
 
 # Music
 
@@ -37,12 +37,12 @@ at Spotify in the Advertising Business Unit, did the 0️⃣-1️⃣ Founding En
   March 2020, days before everything changed forever.
 
 
-# Some Projects
+# Some Tech Projects
 
-## Ableton / DAWs / Music
+## DAWs / Music
 
-- ⭐️ [**Gartrex 9000 Raspberry Pi Mobile Jam Loop Staishe**](https://www.youtube.com/watch?v=gKP3OBteXtg)
-  Custom Node.JS looper, quantizer, swing, arranger. Headless REAPER.
+- ⭐️ [**Raspberry Pi Mobile Jam Looper**](https://www.youtube.com/watch?v=gKP3OBteXtg)
+  Custom TypeScript looper, quantizer, swing, arranger. Headless REAPER.
   Custom compiled low latency Linux kernel.
   More info in this video (turn on CC / subtitles) and see description
   [here live from Mexico](https://www.youtube.com/watch?v=gKP3OBteXtg).
@@ -56,19 +56,19 @@ at Spotify in the Advertising Business Unit, did the 0️⃣-1️⃣ Founding En
   **//**  [demo vid](https://www.youtube.com/watch?v=mulwc2U11o8)
   **//**  [src](https://github.com/JohnnyMarnell/ableton-live-realtime-changes)
 
-- [**Ableton Live HTTP REST API**](https://www.youtube.com/watch?v=xfeG9-BbLko)
-  Prototype of hacking a `SocketServer` into Ableton's undocumented, unofficial python-subsystem and API, for external control (e.g. from a custom web UI)
-  **//**  [demo vid](https://www.youtube.com/watch?v=xfeG9-BbLko)
-  **//**  [src](https://github.com/JohnnyMarnell/ableton-control?tab=readme-ov-file)
-
 - [**REAPER / Network control / API**](https://github.com/JohnnyMarnell/j5-reaper)
   Built a custom Node.JS API to control REAPER. Hacked with Lua and REAPER's
   proprietary EEL script to successfully get a TCP server with
   ring buffer read/write working. Have sinced moved to custom API backed
-  by OSC mappings (need to push). That's allowed me to build my Raspberry
+  by OSC mappings, and MIDI SysEx realtime feedback (need to update codebase). That's allowed me to build my Raspberry
   Pi looper
           [video](https://www.youtube.com/watch?v=gKP3OBteXtg)
   **//**  [source](https://github.com/JohnnyMarnell/j5-reaper)
+
+- [**Ableton Live HTTP REST API**](https://www.youtube.com/watch?v=xfeG9-BbLko)
+  Prototype of hacking a `SocketServer` into Ableton's undocumented, unofficial python-subsystem and API, for external control (e.g. from a custom web UI)
+  **//**  [demo vid](https://www.youtube.com/watch?v=xfeG9-BbLko)
+  **//**  [src](https://github.com/JohnnyMarnell/ableton-control?tab=readme-ov-file)
 
 
 ## More Audio Hacks
@@ -79,12 +79,12 @@ at Spotify in the Advertising Business Unit, did the 0️⃣-1️⃣ Founding En
 - ⭐️ [**Beat Detective**](/beat-detective.md)
   Live beat and tempo detection and synchronizing using python music ML Librosa powered predictions. [Jupyter notebook](./jupyter/tempo), quick [demo vid](https://youtu.be/wihCkwniqwU), plus see it live [here](/led-art)
 
-- Post Coming Soon: Better write-up of my custom Raspberry Pi looper performance rig
+- Post To-Do: Better write-up of my custom Raspberry Pi looper performance rig
 
-- Post Coming Soon: ReModi, live jamming over the internet using MIDI over WebRTC / UDP (miraculously playable in
+- Post To-Do: ReModi, live jamming over the internet using MIDI over WebRTC / UDP (miraculously playable in
   the heart of quarantine with my best friends, NY <=> NJ <=> NC <=> IL)
 
-- Post Coming Soon: Easy to use, custom REAPER API, currently powering [this magic](https://www.youtube.com/watch?v=gKP3OBteXtg)
+- Post To-Do: Easy to use, custom REAPER API, currently powering [this magic](https://www.youtube.com/watch?v=gKP3OBteXtg)
 
 - [**Bass Bounce Visualization**](https://www.youtube.com/watch?v=d0XzIzDG8k0)
   Built automatic audio reactive visualization based on FFT analyzed dynamic signals,
@@ -104,11 +104,15 @@ at Spotify in the Advertising Business Unit, did the 0️⃣-1️⃣ Founding En
   I own both the [Jamstik Studio](https://jamstik.com/) guitar and the [Fishman TriplePlay](https://www.fishman.com/tripleplay/) pickup. This [video](https://www.youtube.com/watch?v=zNkmwI8Ubqs)
   is a zany quick one experimenting with the latter plus a fun orchestral patch that varies instruments depending on velocity and note range (e.g. timpani hit accents added when loud, different horn sections at higher registers). (...It was height of quarantine, please excuse the Snap filter cat lasers 😂).
 
-- Post Coming Soon: Intelligent live use of MIDI guitar
+- [**VST Presets**](/vst3-preset)
+  Converting older, propietary VST plugin parameter files like `.fxp` to more universal `.vstpreset`.
 
-- Post Coming Soon: How I'm approaching this site's code, improvements (it's so beautiful for starters, isn't it?...)
 
-- Post Coming Soon (I hope 🤞🏻): Massive backlog, all these "coming soon"erisms...
+- Post To-Do: Intelligent live use of MIDI guitar
+
+- Post To-Do: How I'm approaching this site's code, desired improvements (it's so beautiful for starters, isn't it?...)
+
+- Post Coming Soon (I hope 🤞🏻): Massive backlog, all these "To-Do"s...
 
 # Connect With Me
 
@@ -116,3 +120,4 @@ I love to collaborate on fun projects, let's talk.
 
 - [LinkedIn](https://www.linkedin.com/in/johnnymarnell)
 - [Instagram @johnnymarnell](https://www.instagram.com/johnnymarnell)
+- [git](https://github.com/JohnnyMarnell)
