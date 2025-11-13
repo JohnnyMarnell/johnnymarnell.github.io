@@ -104,7 +104,7 @@ at Spotify in the Advertising Business Unit, and did the 0️⃣-1️⃣ Foundin
   I own both the [Jamstik Studio](https://jamstik.com/) guitar and the [Fishman TriplePlay](https://www.fishman.com/tripleplay/) pickup. This [video](https://www.youtube.com/watch?v=zNkmwI8Ubqs)
   is a zany quick one experimenting with the latter plus a fun orchestral patch that varies instruments depending on velocity and note range (e.g. timpani hit accents added when loud, different horn sections at higher registers). (...It was height of quarantine, please excuse the Snap filter cat lasers 😂).
 
-- [**VST Presets**](/vst3-preset)
+- [**VST Presets**](/vst3-presets)
   Converting older, propietary VST plugin parameter files like `.fxp` to more universal `.vstpreset`.
 
 
