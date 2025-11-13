@@ -39,7 +39,7 @@ at Spotify in the Advertising Business Unit, and did the 0️⃣-1️⃣ Foundin
 
 # Some Tech Projects
 
-## DAWs / Music
+## Music / DAW Hacks
 
 - ⭐️ [**Raspberry Pi Mobile Jam Looper**](https://www.youtube.com/watch?v=gKP3OBteXtg)
   Custom TypeScript looper, quantizer, swing, arranger. Headless REAPER.
@@ -47,9 +47,10 @@ at Spotify in the Advertising Business Unit, and did the 0️⃣-1️⃣ Foundin
   More info in this video (turn on CC / subtitles) and see description
   [here live from Mexico](https://www.youtube.com/watch?v=gKP3OBteXtg).
   Have taken this all over the world:
+         [DJ sets](https://youtube.com/shorts/Kg0VKvDbvkU)
          [dive boats](https://www.youtube.com/watch?v=KVO8QH8ydek)
   **//** [weddings](https://www.youtube.com/watch?v=5gXpDlQAJRI)
-  **//** [playing songs we never have before](https://www.youtube.com/watch?v=5gXpDlQAJRI) and beyond...
+  **//** [playing songs we never have before](https://youtu.be/3CNAn4c9Ncs?si=UXhYVwPt69qy4mKU&t=2889) and beyond...
 
 - [**Ableton Live Realtime Diff**](https://www.youtube.com/watch?v=mulwc2U11o8)
   Did you know Ableton Live Set (`.als`) files were just gzipped XML? ...you did? Well, quit your showboating. This hack surfaces realtime changes to the underlying file as you save
