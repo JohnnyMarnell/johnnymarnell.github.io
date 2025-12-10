@@ -2,7 +2,7 @@
 title: johnny-marnell
 description: all things music and tech
 baseurl: "/" # the subpath of your site, e.g. /blog
-url: "https://johnny-marnell.github.io" # the base hostname & protocol for your site
+url: "https://johnnymarnell.github.io" # the base hostname & protocol for your site
 
 # Theme selection - uncomment the theme you want to use
 # GitHub Pages supported themes:

@@ -74,7 +74,7 @@ at Spotify in the Advertising Business Unit, and did the 0️⃣-1️⃣ Foundin
 
 ## More Audio Hacks
 
-- ⭐️ [**10k+ LED Art installation**](/led-art)
+- ⭐️ [**10k+ LED Art installation**](/led)
   Java, Chromatik / LX Studio, Raspberry Pi plus Node.JS UI and python ML beat syncing
 
 - ⭐️ [**Beat Detective**](/beat-detective.md)
