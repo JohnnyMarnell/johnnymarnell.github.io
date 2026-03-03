@@ -115,6 +115,11 @@ at Spotify in the Advertising Business Unit, and did the 0️⃣-1️⃣ Foundin
 
 - Post Coming Soon (I hope 🤞🏻): Massive backlog, all these "To-Do"s...
 
+## AI / LLM
+
+- [**LLM Memory Architecture**](/memory-architecture)
+  A from-first-principles breakdown of how to build memory for LLM-based agents: the five distinct memory types, a three-stage write pipeline (extraction → consolidation → review), tiered retrieval strategies, and how to handle decay, contradiction, and hallucination poisoning.
+
 # Connect With Me
 
 I love to collaborate on fun projects, let's talk.
