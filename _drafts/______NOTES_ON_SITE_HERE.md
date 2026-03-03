@@ -1,5 +1,6 @@
 # Notes
 
+- this is probably out of date v2
 - LEDs / similar style posts
     - Flexbox
     - stand up Tailwind, 
