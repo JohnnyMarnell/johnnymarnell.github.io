@@ -1,3 +1,10 @@
+Not terribly vetted, friend and I were chatting with Claude on
+how to manage long-term "memory" of conversations in a git file tree
+of markdown files for Claude Code long term work or assistant like
+"life projects".
+
+## Claude
+
 Alright, let me think through this properly from first principles.
 
 ## The Core Problem
