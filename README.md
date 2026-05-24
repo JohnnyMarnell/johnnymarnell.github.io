@@ -12,14 +12,14 @@ at Spotify in the Advertising Business Unit, and did the 0️⃣-1️⃣ Foundin
 
   Music has always been a big part of my life, and I'm proud to say I've done some cool things with it.
 
-  ⭐️ I co-wrote this ➡️ [K-Pop record](https://www.youtube.com/watch?v=jXtAs2W5s5k) ⬅️
+  ⭐️ I co-wrote this ➡️ [K-Pop record](https://www.youtube.com/watch?v=2oGftByddrg) ⬅️
      released by mega group [TWICE](https://www.instagram.com/twicetagram/).
      What a journey this was, listen to the evolution here:
 
   - Our original
      [Doo Wop throwback demo pitch](https://www.youtube.com/watch?v=o2qSVklbBXw), co-written with castmates from the Bravo songwriting reality show I did
   - Amber Riley of Glee also [recorded it](https://www.youtube.com/watch?v=tNP8GbRQDXk), but it sat for half a decade
-  - Then JYP Records re-wrote the [lyrics in Korean](https://www.youtube.com/watch?v=jXtAs2W5s5k) ⭐️
+  - Then JYP Records re-wrote the [lyrics in Korean](https://www.youtube.com/watch?v=2oGftByddrg) ⭐️
   
   I was on a
   [Bravo TV reality show for songwriting](https://www.bravotv.com/platinum-hit).
