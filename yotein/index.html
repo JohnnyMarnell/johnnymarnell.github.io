@@ -436,18 +436,18 @@
     <section>
       <div class="section-label">Podcast Episodes</div>
 
-      <!-- Brief -->
+      <!-- Long / Tech Deep Dive -->
       <div class="episode-card">
         <div class="episode-header">
-          <div class="ep-icon brief">🎯</div>
+          <div class="ep-icon long">🤖</div>
           <div class="ep-meta">
-            <span class="ep-type brief">Brief · ~3 min</span>
-            <div class="ep-title">Precise AI Protein Binders for Cancer</div>
-            <div class="ep-desc">The short version — what Isaac built, why it matters for cancer, and why it's a big deal. Start here if you want the fast track before the defense.</div>
+            <span class="ep-type long">Extended · ~40 min</span>
+            <div class="ep-title">AI Hallucinates Precision Protein Binders</div>
+            <div class="ep-desc">The tech-savvy long-form episode — how the AI/ML pipeline actually works: denoising diffusion, conditioning tensors, ProteinMPNN, AlphaFold 2 validation. Rooted in Isaac's specific methods, for a general technical audience. Camp shout-out up front.</div>
           </div>
         </div>
-        <audio id="player-brief" controls>
-          <source src="audio/Precise_AI_protein_binders_for_cancer.m4a" type="audio/mp4">
+        <audio id="player-long" controls>
+          <source src="audio/AI_Hallucinates_Precision_Protein_Binders.m4a" type="audio/mp4">
         </audio>
       </div>
 
@@ -463,6 +463,21 @@
         </div>
         <audio id="player-deep" controls>
           <source src="audio/AI_molecular_switchblades_for_undruggable_proteins.m4a" type="audio/mp4">
+        </audio>
+      </div>
+
+      <!-- Brief -->
+      <div class="episode-card">
+        <div class="episode-header">
+          <div class="ep-icon brief">🎯</div>
+          <div class="ep-meta">
+            <span class="ep-type brief">Brief · ~3 min</span>
+            <div class="ep-title">Precise AI Protein Binders for Cancer</div>
+            <div class="ep-desc">The short version — what Isaac built, why it matters for cancer, and why it's a big deal. Start here if you want the fast track before the defense.</div>
+          </div>
+        </div>
+        <audio id="player-brief" controls>
+          <source src="audio/Precise_AI_protein_binders_for_cancer.m4a" type="audio/mp4">
         </audio>
       </div>
 
@@ -513,12 +528,37 @@
           <a class="btn btn-primary" href="pdf/The_Beta_Blueprint.pdf" download>
             ↓ Download PDF
           </a>
-          <button class="btn btn-secondary" onclick="togglePdfEmbed()" id="pdf-toggle-btn">
+          <button class="btn btn-secondary" onclick="togglePdfEmbed('pdf-frame','pdf-toggle-btn','pdf/The_Beta_Blueprint.pdf')" id="pdf-toggle-btn">
             View inline
           </button>
         </div>
         <div class="pdf-embed-wrapper">
           <iframe class="pdf-frame" id="pdf-frame" src="" title="The Beta Blueprint slide deck"></iframe>
+        </div>
+      </div>
+    </section>
+
+    <!-- Paper -->
+    <section>
+      <div class="section-label">The Paper</div>
+      <div class="pdf-card">
+        <div class="pdf-header">
+          <div class="pdf-icon">📄</div>
+          <div class="pdf-meta">
+            <h3>Improved Protein Binder Design Using β-Pairing Targeted RFdiffusion</h3>
+            <p>Isaac Sappington · Nature Communications · The actual thesis paper</p>
+          </div>
+        </div>
+        <div class="pdf-actions">
+          <a class="btn btn-primary" href="pdf/Isaac_Sappington_paper.pdf" download>
+            ↓ Download PDF
+          </a>
+          <button class="btn btn-secondary" onclick="togglePdfEmbed('paper-frame', 'paper-toggle-btn', 'pdf/Isaac_Sappington_paper.pdf')">
+            View inline
+          </button>
+        </div>
+        <div class="pdf-embed-wrapper">
+          <iframe class="pdf-frame" id="paper-frame" src="" title="Isaac Sappington thesis paper"></iframe>
         </div>
       </div>
     </section>
@@ -538,17 +578,14 @@
   <script src="https://cdn.plyr.io/3.7.8/plyr.polyfilled.js"></script>
   <script>
     // Init Plyr players
-    const playerBrief = new Plyr('#player-brief', {
+    const plyrConfig = {
       controls: ['play', 'progress', 'current-time', 'duration', 'mute', 'volume', 'settings', 'download'],
       settings: ['speed'],
       speed: { selected: 1, options: [0.75, 1, 1.25, 1.5, 2] },
-    });
-
-    const playerDeep = new Plyr('#player-deep', {
-      controls: ['play', 'progress', 'current-time', 'duration', 'mute', 'volume', 'settings', 'download'],
-      settings: ['speed'],
-      speed: { selected: 1, options: [0.75, 1, 1.25, 1.5, 2] },
-    });
+    };
+    new Plyr('#player-long', plyrConfig);
+    new Plyr('#player-deep', plyrConfig);
+    new Plyr('#player-brief', plyrConfig);
 
     // Lightbox
     function openLightbox(src) {
@@ -566,16 +603,19 @@
       if (e.key === 'Escape') closeLightbox();
     });
 
-    // PDF embed toggle
-    let pdfLoaded = false;
-    function togglePdfEmbed() {
-      const frame = document.getElementById('pdf-frame');
-      const btn = document.getElementById('pdf-toggle-btn');
+    // PDF embed toggle (shared, keyed by frame id)
+    const pdfLoaded = {};
+    function togglePdfEmbed(frameId, btnId, src) {
+      frameId = frameId || 'pdf-frame';
+      btnId = btnId || 'pdf-toggle-btn';
+      src = src || 'pdf/The_Beta_Blueprint.pdf';
+      const frame = document.getElementById(frameId);
+      const btn = document.getElementById(btnId);
       const isVisible = frame.classList.toggle('visible');
       btn.textContent = isVisible ? 'Hide' : 'View inline';
-      if (isVisible && !pdfLoaded) {
-        frame.src = 'pdf/The_Beta_Blueprint.pdf';
-        pdfLoaded = true;
+      if (isVisible && !pdfLoaded[frameId]) {
+        frame.src = src;
+        pdfLoaded[frameId] = true;
       }
     }
   </script>
