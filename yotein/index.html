@@ -3,7 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>β-Pairing RFdiffusion — Isaac's Thesis Defense</title>
+  <title>β-Pairing RFdiffusion — AI Slop Gen Paper and Thesis Defense Primer</title>
+  <meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex">
+  <meta name="referrer" content="no-referrer">
+  <title>Listening Notes</title>
   <link rel="stylesheet" href="https://cdn.plyr.io/3.7.8/plyr.css">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -205,6 +208,59 @@
 
     .plyr__progress input[type=range],
     .plyr__volume input[type=range] {
+      color: var(--accent);
+    }
+
+    /* ── Audio extras: speed pills + download ── */
+    .audio-extras {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      margin-top: 0.6rem;
+      flex-wrap: wrap;
+    }
+    .speed-pills {
+      display: inline-flex;
+      gap: 0.3rem;
+      align-items: center;
+    }
+    .speed-pills .speed-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-right: 0.25rem;
+    }
+    .speed-pills button {
+      font-family: inherit;
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 0.25rem 0.55rem;
+      border-radius: 99px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--muted);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .speed-pills button:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    .speed-pills button.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+    .dl-link {
+      font-size: 0.78rem;
+      color: var(--muted);
+      text-decoration: none;
+      font-weight: 600;
+    }
+    .dl-link:hover {
       color: var(--accent);
     }
 
@@ -427,7 +483,7 @@
   <div class="hero">
     <div class="camp-badge">🧀 In Queso Emergency presents</div>
     <h1>β-Pairing <em>RFdiffusion</em><br>for Improved Protein Binder Design</h1>
-    <p class="subtitle">Isaac's thesis defense — listening prep for the camp crew. Not a protein scientist? Perfect, these are made for you.</p>
+    <p class="subtitle">our boy's thesis defense — listening prep for the camp crew. Not a protein scientist? Perfect, these are made for you.</p>
     <div class="meta">Generated with NotebookLM · May 2026</div>
   </div>
 
@@ -443,12 +499,21 @@
           <div class="ep-meta">
             <span class="ep-type long">Extended · ~40 min</span>
             <div class="ep-title">AI Hallucinates Precision Protein Binders</div>
-            <div class="ep-desc">The tech-savvy long-form episode — how the AI/ML pipeline actually works: denoising diffusion, conditioning tensors, ProteinMPNN, AlphaFold 2 validation. Rooted in Isaac's specific methods, for a general technical audience. Camp shout-out up front.</div>
+            <div class="ep-desc">The tech-savvy long-form episode — how the AI/ML pipeline actually works: denoising diffusion, conditioning tensors, ProteinMPNN, AlphaFold 2 validation. Rooted in our boy's specific methods, for a general technical audience. Camp shout-out up front.</div>
           </div>
         </div>
         <audio id="player-long" controls>
           <source src="audio/AI_Hallucinates_Precision_Protein_Binders.m4a" type="audio/mp4">
         </audio>
+        <div class="audio-extras">
+          <div class="speed-pills" data-player="player-long">
+            <span class="speed-label">Speed</span>
+            <button type="button" data-speed="1" class="active">1×</button>
+            <button type="button" data-speed="1.5">1.5×</button>
+            <button type="button" data-speed="2">2×</button>
+          </div>
+          <a class="dl-link" href="audio/AI_Hallucinates_Precision_Protein_Binders.m4a" download>↓ Download</a>
+        </div>
       </div>
 
       <!-- Deep Dive -->
@@ -458,12 +523,21 @@
           <div class="ep-meta">
             <span class="ep-type deep">Deep Dive · ~20 min</span>
             <div class="ep-title">AI Molecular Switchblades for Undruggable Proteins</div>
-            <div class="ep-desc">The full episode — covers the AI and ML techniques (RFdiffusion, ProteinMPNN, AlphaFold 2) in plain language. Rooted in Isaac's exact research. Features a shout-out to the camp.</div>
+            <div class="ep-desc">The full episode — covers the AI and ML techniques (RFdiffusion, ProteinMPNN, AlphaFold 2) in plain language. Rooted in our boy's exact research. Features a shout-out to the camp.</div>
           </div>
         </div>
         <audio id="player-deep" controls>
           <source src="audio/AI_molecular_switchblades_for_undruggable_proteins.m4a" type="audio/mp4">
         </audio>
+        <div class="audio-extras">
+          <div class="speed-pills" data-player="player-deep">
+            <span class="speed-label">Speed</span>
+            <button type="button" data-speed="1" class="active">1×</button>
+            <button type="button" data-speed="1.5">1.5×</button>
+            <button type="button" data-speed="2">2×</button>
+          </div>
+          <a class="dl-link" href="audio/AI_molecular_switchblades_for_undruggable_proteins.m4a" download>↓ Download</a>
+        </div>
       </div>
 
       <!-- Brief -->
@@ -473,12 +547,21 @@
           <div class="ep-meta">
             <span class="ep-type brief">Brief · ~3 min</span>
             <div class="ep-title">Precise AI Protein Binders for Cancer</div>
-            <div class="ep-desc">The short version — what Isaac built, why it matters for cancer, and why it's a big deal. Start here if you want the fast track before the defense.</div>
+            <div class="ep-desc">The short version — what our boy built, why it matters for cancer, and why it's a big deal. Start here if you want the fast track before the defense.</div>
           </div>
         </div>
         <audio id="player-brief" controls>
           <source src="audio/Precise_AI_protein_binders_for_cancer.m4a" type="audio/mp4">
         </audio>
+        <div class="audio-extras">
+          <div class="speed-pills" data-player="player-brief">
+            <span class="speed-label">Speed</span>
+            <button type="button" data-speed="1" class="active">1×</button>
+            <button type="button" data-speed="1.5">1.5×</button>
+            <button type="button" data-speed="2">2×</button>
+          </div>
+          <a class="dl-link" href="audio/Precise_AI_protein_binders_for_cancer.m4a" download>↓ Download</a>
+        </div>
       </div>
 
     </section>
@@ -488,7 +571,7 @@
       <div class="section-label">Quick Context</div>
       <div class="context-box">
         <strong>The problem:</strong> Some protein surfaces are covered in water-loving (hydrophilic) regions that are nearly impossible to design binders for — the AI keeps getting it wrong because water molecules occupy all the binding spots.<br><br>
-        <strong>Isaac's solution:</strong> He conditioned RFdiffusion — a generative AI that "sculpts" proteins from random noise — to specifically build β-strands (flat, zipper-like structures) that pair with the target protein's own edges, forming precise hydrogen-bond networks.<br><br>
+        <strong>Our boy's solution:</strong> He conditioned RFdiffusion — a generative AI that "sculpts" proteins from random noise — to specifically build β-strands (flat, zipper-like structures) that pair with the target protein's own edges, forming precise hydrogen-bond networks.<br><br>
         <strong>Why it's huge:</strong> His method hit a <strong>9.2% success rate</strong>, nearly 10× better than standard AI approaches. He designed binders for <strong>KIT and PDGFRα</strong> (cancer signaling proteins) and proved atomic-level accuracy with X-ray crystallography (1.9Å agreement between digital model and physical crystal). These targets were previously considered nearly undruggable.
       </div>
     </section>
@@ -496,7 +579,7 @@
     <!-- Infographics -->
     <section>
       <div class="section-label">Infographics</div>
-      <p class="desc">AI-generated visual summaries of Isaac's research. Tap to expand.</p>
+      <p class="desc">AI-generated visual summaries of our boy's research. Tap to expand.</p>
       <div class="infographic-grid">
         <div class="infographic-card">
           <img src="img/Targeted_Beta-pairing_Protein_Design.png"
@@ -546,19 +629,19 @@
           <div class="pdf-icon">📄</div>
           <div class="pdf-meta">
             <h3>Improved Protein Binder Design Using β-Pairing Targeted RFdiffusion</h3>
-            <p>Isaac Sappington · Nature Communications · The actual thesis paper</p>
+            <p>Nature Communications · The actual thesis paper</p>
           </div>
         </div>
         <div class="pdf-actions">
-          <a class="btn btn-primary" href="pdf/Isaac_Sappington_paper.pdf" download>
+          <a class="btn btn-primary" href="pdf/paper.pdf" download>
             ↓ Download PDF
           </a>
-          <button class="btn btn-secondary" onclick="togglePdfEmbed('paper-frame', 'paper-toggle-btn', 'pdf/Isaac_Sappington_paper.pdf')">
+          <button class="btn btn-secondary" onclick="togglePdfEmbed('paper-frame', 'paper-toggle-btn', 'pdf/paper.pdf')">
             View inline
           </button>
         </div>
         <div class="pdf-embed-wrapper">
-          <iframe class="pdf-frame" id="paper-frame" src="" title="Isaac Sappington thesis paper"></iframe>
+          <iframe class="pdf-frame" id="paper-frame" src="" title="Thesis paper"></iframe>
         </div>
       </div>
     </section>
@@ -572,20 +655,37 @@
   </div>
 
   <footer>
-    Made for Isaac's thesis defense · In Queso Emergency · NotebookLM artifacts
+    Made for our boy's thesis defense · In Queso Emergency · NotebookLM artifacts
   </footer>
 
   <script src="https://cdn.plyr.io/3.7.8/plyr.polyfilled.js"></script>
   <script>
     // Init Plyr players
     const plyrConfig = {
-      controls: ['play', 'progress', 'current-time', 'duration', 'mute', 'volume', 'settings', 'download'],
+      controls: ['play', 'progress', 'current-time', 'duration', 'mute', 'volume', 'settings'],
       settings: ['speed'],
       speed: { selected: 1, options: [0.75, 1, 1.25, 1.5, 2] },
     };
-    new Plyr('#player-long', plyrConfig);
-    new Plyr('#player-deep', plyrConfig);
-    new Plyr('#player-brief', plyrConfig);
+    const players = {
+      'player-long': new Plyr('#player-long', plyrConfig),
+      'player-deep': new Plyr('#player-deep', plyrConfig),
+      'player-brief': new Plyr('#player-brief', plyrConfig),
+    };
+
+    // Wire custom speed pills → Plyr instance, and reflect cog changes back into pills
+    document.querySelectorAll('.speed-pills').forEach(group => {
+      const player = players[group.dataset.player];
+      if (!player) return;
+      const buttons = group.querySelectorAll('button');
+      const sync = () => {
+        const s = player.speed;
+        buttons.forEach(b => b.classList.toggle('active', parseFloat(b.dataset.speed) === s));
+      };
+      buttons.forEach(btn => {
+        btn.addEventListener('click', () => { player.speed = parseFloat(btn.dataset.speed); });
+      });
+      player.on('ratechange', sync);
+    });
 
     // Lightbox
     function openLightbox(src) {
