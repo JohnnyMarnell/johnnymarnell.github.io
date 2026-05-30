@@ -264,6 +264,63 @@
       color: var(--accent);
     }
 
+    /* ── Slide preview (client-side PDF.js thumbnails) ── */
+    .slide-preview {
+      display: flex;
+      gap: 0.6rem;
+      overflow-x: auto;
+      padding: 1rem 1.5rem;
+      background: var(--surface2);
+      border-top: 1px solid var(--border);
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: thin;
+    }
+    .slide-preview { min-height: 60px; align-items: center; }
+    .slide-preview-loading {
+      flex: 1;
+      text-align: center;
+      font-size: 0.78rem;
+      color: var(--muted);
+      letter-spacing: 0.04em;
+    }
+    .slide-thumb {
+      position: relative;
+      flex-shrink: 0;
+      padding: 0;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+      cursor: zoom-in;
+      background: #fff;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+    }
+    .slide-thumb:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      border-color: var(--accent);
+    }
+    .slide-thumb canvas { display: block; }
+    .slide-thumb-label {
+      position: absolute;
+      bottom: 0.3rem;
+      right: 0.3rem;
+      background: rgba(0,0,0,0.7);
+      color: #fff;
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 0.1rem 0.4rem;
+      border-radius: 3px;
+      letter-spacing: 0.05em;
+    }
+    .slide-preview-empty {
+      padding: 1rem 1.5rem;
+      font-size: 0.78rem;
+      color: var(--muted);
+      background: var(--surface2);
+      border-top: 1px solid var(--border);
+    }
+
     /* ── Images ── */
     .infographic-grid {
       display: grid;
@@ -607,6 +664,7 @@
             <p>AI-generated slide deck — full visual walkthrough of the methodology and results</p>
           </div>
         </div>
+        <div class="slide-preview" id="slide-preview" data-pdf-src="pdf/The_Beta_Blueprint.pdf" aria-label="Slide thumbnails — tap to enlarge"></div>
         <div class="pdf-actions">
           <a class="btn btn-primary" href="pdf/The_Beta_Blueprint.pdf" download>
             ↓ Download PDF
@@ -659,6 +717,7 @@
   </footer>
 
   <script src="https://cdn.plyr.io/3.7.8/plyr.polyfilled.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <script>
     // Init Plyr players
     const plyrConfig = {
@@ -718,6 +777,94 @@
         pdfLoaded[frameId] = true;
       }
     }
+
+    // Slide deck preview — client-side render via PDF.js, lazy-loaded on scroll
+    (function initSlidePreview() {
+      const container = document.getElementById('slide-preview');
+      if (!container || !window.pdfjsLib) return;
+      const pdfUrl = container.dataset.pdfSrc;
+      if (!pdfUrl) return;
+
+      pdfjsLib.GlobalWorkerOptions.workerSrc =
+        'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+      const loading = document.createElement('div');
+      loading.className = 'slide-preview-loading';
+      loading.textContent = 'Loading slide previews…';
+      container.appendChild(loading);
+
+      let loadedPdf = null;
+      let started = false;
+
+      async function renderThumbs() {
+        if (started) return;
+        started = true;
+        try {
+          loadedPdf = await pdfjsLib.getDocument(pdfUrl).promise;
+          loading.textContent = 'Rendering ' + loadedPdf.numPages + ' slides…';
+          const THUMB_W = 180;
+          const dpr = window.devicePixelRatio || 1;
+          for (let i = 1; i <= loadedPdf.numPages; i++) {
+            const page = await loadedPdf.getPage(i);
+            const base = page.getViewport({ scale: 1 });
+            const scale = THUMB_W / base.width;
+            const viewport = page.getViewport({ scale: scale * dpr });
+            const canvas = document.createElement('canvas');
+            canvas.width = viewport.width;
+            canvas.height = viewport.height;
+            canvas.style.width = (viewport.width / dpr) + 'px';
+            canvas.style.height = (viewport.height / dpr) + 'px';
+            await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'slide-thumb';
+            btn.setAttribute('aria-label', 'Slide ' + i + ' — tap to enlarge');
+            btn.appendChild(canvas);
+            const label = document.createElement('span');
+            label.className = 'slide-thumb-label';
+            label.textContent = i;
+            btn.appendChild(label);
+            btn.addEventListener('click', () => openSlideLightbox(i));
+            container.appendChild(btn);
+          }
+          loading.remove();
+        } catch (e) {
+          console.warn('Slide preview failed:', e);
+          container.remove();
+        }
+      }
+
+      async function openSlideLightbox(pageNum) {
+        if (!loadedPdf) return;
+        try {
+          const page = await loadedPdf.getPage(pageNum);
+          const targetW = Math.min(window.innerWidth * 0.95, 1600);
+          const base = page.getViewport({ scale: 1 });
+          const scale = targetW / base.width;
+          const viewport = page.getViewport({ scale });
+          const canvas = document.createElement('canvas');
+          canvas.width = viewport.width;
+          canvas.height = viewport.height;
+          await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+          openLightbox(canvas.toDataURL('image/png'));
+        } catch (e) {
+          console.warn('Slide lightbox render failed:', e);
+        }
+      }
+
+      if ('IntersectionObserver' in window) {
+        const obs = new IntersectionObserver((entries) => {
+          if (entries.some(e => e.isIntersecting)) {
+            obs.disconnect();
+            renderThumbs();
+          }
+        }, { rootMargin: '400px' });
+        obs.observe(container);
+      } else {
+        renderThumbs();
+      }
+    })();
   </script>
 </body>
 </html>
