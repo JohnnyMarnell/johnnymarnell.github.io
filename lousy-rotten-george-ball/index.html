@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Happy 75th, George Ball Bob Marnell</title>
+  <link rel="stylesheet" href="https://cdn.plyr.io/3.7.8/plyr.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #faf8f5;
+      --surface: #ffffff;
+      --surface2: #f3ede4;
+      --border: #e5ddd1;
+      --text: #1a1a18;
+      --muted: #6b6860;
+      --accent: #b45309;
+      --accent-light: #fef3c7;
+      --green: #16a34a;
+      --green-light: #dcfce7;
+      --purple: #7c3aed;
+      --purple-light: #ede9fe;
+      --amber: #b45309;
+      --amber-light: #fef3c7;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    /* ── Hero ── */
+    .hero {
+      background: linear-gradient(135deg, #78350f 0%, #b45309 45%, #92400e 100%);
+      color: #fff;
+      padding: 1.75rem 1.5rem 1.5rem;
+      text-align: center;
+    }
+
+    .camp-badge {
+      display: inline-block;
+      background: rgba(255,255,255,0.15);
+      border: 1px solid rgba(255,255,255,0.3);
+      border-radius: 99px;
+      padding: 0.3rem 1rem;
+      font-size: 0.78rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      font-weight: 600;
+      margin-bottom: 1.2rem;
+    }
+
+    .hero h1 {
+      font-size: clamp(1.5rem, 5vw, 2.4rem);
+      font-weight: 700;
+      line-height: 1.2;
+      margin-bottom: 0.5rem;
+      letter-spacing: -0.01em;
+    }
+
+    .hero h1 em {
+      font-style: normal;
+      color: #fde68a;
+    }
+
+    .hero .subtitle {
+      font-size: 0.95rem;
+      color: rgba(255,255,255,0.75);
+      max-width: 520px;
+      margin: 0 auto;
+    }
+
+    /* ── YouTube card ── */
+    .yt-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+    }
+
+    .yt-thumb {
+      position: relative;
+      cursor: pointer;
+      background: #000;
+      display: block;
+    }
+
+    .yt-thumb img {
+      width: 100%;
+      max-height: 200px;
+      object-fit: cover;
+      display: block;
+      opacity: 0.88;
+      transition: opacity 0.15s;
+    }
+
+    .yt-thumb:hover img { opacity: 1; }
+
+    .yt-play {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+    }
+
+    .yt-play svg {
+      width: 52px;
+      height: 52px;
+      filter: drop-shadow(0 2px 8px rgba(0,0,0,0.6));
+    }
+
+    .yt-caption {
+      padding: 0.65rem 1rem;
+      font-size: 0.8rem;
+      color: var(--muted);
+      font-weight: 500;
+      border-top: 1px solid var(--border);
+    }
+
+    /* ── Layout ── */
+    .container {
+      max-width: 820px;
+      margin: 0 auto;
+      padding: 0 1.25rem;
+    }
+
+    section {
+      padding: 2.5rem 0;
+    }
+
+    section + section {
+      border-top: 1px solid var(--border);
+    }
+
+    .section-label {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 1.5rem;
+    }
+
+    .section-label::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    h2 {
+      font-size: 1.35rem;
+      font-weight: 700;
+      margin-bottom: 0.4rem;
+      line-height: 1.3;
+    }
+
+    p.desc {
+      color: var(--muted);
+      font-size: 0.92rem;
+      margin-bottom: 1.2rem;
+    }
+
+    /* ── Episode Cards ── */
+    .episode-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 1.5rem;
+      margin-bottom: 1.25rem;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+    }
+
+    .episode-header {
+      display: flex;
+      align-items: flex-start;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .ep-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.4rem;
+      flex-shrink: 0;
+    }
+
+    .ep-icon.warm { background: var(--amber-light); }
+    .ep-icon.deep { background: var(--accent-light); }
+    .ep-icon.brief { background: var(--green-light); }
+
+    .ep-meta { flex: 1; }
+
+    .ep-type {
+      display: inline-block;
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 0.15rem 0.55rem;
+      border-radius: 99px;
+      margin-bottom: 0.35rem;
+    }
+
+    .ep-type.warm { background: var(--amber-light); color: var(--amber); }
+    .ep-type.deep { background: var(--accent-light); color: var(--accent); }
+    .ep-type.brief { background: var(--green-light); color: var(--green); }
+
+    .ep-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      line-height: 1.3;
+      margin-bottom: 0.2rem;
+    }
+
+    .ep-desc {
+      font-size: 0.83rem;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    /* Plyr overrides */
+    .plyr--audio .plyr__controls {
+      background: var(--surface2);
+      border-radius: 10px;
+      padding: 0.6rem 0.8rem;
+    }
+
+    .plyr--audio .plyr__control { color: var(--text); }
+    .plyr--audio .plyr__control:hover { background: var(--border); }
+
+    .plyr__progress input[type=range],
+    .plyr__volume input[type=range] { color: var(--accent); }
+
+    /* ── Audio extras: speed pills + download ── */
+    .audio-extras {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      margin-top: 0.6rem;
+      flex-wrap: wrap;
+    }
+
+    .speed-pills {
+      display: inline-flex;
+      gap: 0.3rem;
+      align-items: center;
+    }
+
+    .speed-pills .speed-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-right: 0.25rem;
+    }
+
+    .speed-pills button {
+      font-family: inherit;
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 0.25rem 0.55rem;
+      border-radius: 99px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--muted);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .speed-pills button:hover { border-color: var(--accent); color: var(--accent); }
+    .speed-pills button.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+    .dl-link {
+      font-size: 0.78rem;
+      color: var(--muted);
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .dl-link:hover { color: var(--accent); }
+
+    /* ── Slide preview ── */
+    .slide-preview {
+      display: flex;
+      gap: 0.6rem;
+      overflow-x: auto;
+      padding: 1rem 1.5rem;
+      background: var(--surface2);
+      border-top: 1px solid var(--border);
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: thin;
+      min-height: 60px;
+      align-items: center;
+    }
+
+    .slide-preview-loading {
+      flex: 1;
+      text-align: center;
+      font-size: 0.78rem;
+      color: var(--muted);
+      letter-spacing: 0.04em;
+    }
+
+    .slide-thumb {
+      position: relative;
+      flex-shrink: 0;
+      padding: 0;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+      cursor: zoom-in;
+      background: #fff;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+    }
+
+    .slide-thumb:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      border-color: var(--accent);
+    }
+
+    .slide-thumb canvas { display: block; }
+
+    .slide-thumb-label {
+      position: absolute;
+      bottom: 0.3rem;
+      right: 0.3rem;
+      background: rgba(0,0,0,0.7);
+      color: #fff;
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 0.1rem 0.4rem;
+      border-radius: 3px;
+      letter-spacing: 0.05em;
+    }
+
+    /* ── Images ── */
+    .infographic-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.25rem;
+    }
+
+    .infographic-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+    }
+
+    .infographic-card img {
+      width: 100%;
+      height: auto;
+      display: block;
+      cursor: zoom-in;
+      transition: opacity 0.15s;
+    }
+
+    .infographic-card img:hover { opacity: 0.92; }
+
+    .infographic-caption {
+      padding: 0.85rem 1rem;
+      font-size: 0.82rem;
+      color: var(--muted);
+      font-weight: 500;
+      border-top: 1px solid var(--border);
+    }
+
+    /* ── Lightbox ── */
+    #lightbox {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.82);
+      z-index: 1000;
+      cursor: zoom-out;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+
+    #lightbox.active { display: flex; }
+
+    #lightbox img {
+      max-width: 100%;
+      max-height: 90vh;
+      border-radius: 8px;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+    }
+
+    #lightbox-close {
+      position: fixed;
+      top: 1rem;
+      right: 1.25rem;
+      color: #fff;
+      font-size: 2rem;
+      cursor: pointer;
+      line-height: 1;
+      background: none;
+      border: none;
+      z-index: 1001;
+    }
+
+    /* ── PDF Section ── */
+    .pdf-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+    }
+
+    .pdf-header {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 1.25rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .pdf-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+      background: var(--amber-light);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.3rem;
+      flex-shrink: 0;
+    }
+
+    .pdf-meta h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 0.15rem;
+    }
+
+    .pdf-meta p {
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    .pdf-actions {
+      display: flex;
+      gap: 0.75rem;
+      padding: 1rem 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.55rem 1.1rem;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-decoration: none;
+      cursor: pointer;
+      border: none;
+      transition: opacity 0.15s, background 0.15s;
+    }
+
+    .btn:hover { opacity: 0.85; }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+
+    .pdf-embed-wrapper { padding: 0 1.5rem 1.5rem; }
+
+    iframe.pdf-frame {
+      width: 100%;
+      height: 600px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      display: none;
+    }
+
+    iframe.pdf-frame.visible { display: block; }
+
+    /* ── Context box ── */
+    .context-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--accent);
+      border-radius: 0 12px 12px 0;
+      padding: 1.1rem 1.3rem;
+      font-size: 0.88rem;
+      line-height: 1.65;
+      color: var(--muted);
+    }
+
+    .context-box strong { color: var(--text); }
+
+    /* ── Footer ── */
+    footer {
+      text-align: center;
+      padding: 2rem 1.5rem;
+      font-size: 0.78rem;
+      color: #b0ab9e;
+      border-top: 1px solid var(--border);
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 600px) {
+      .hero { padding: 2rem 1.25rem 2rem; }
+      section { padding: 2rem 0; }
+      .episode-card { padding: 1.1rem; }
+      .pdf-header { padding: 1rem 1.1rem; }
+      .pdf-actions { padding: 0.75rem 1.1rem; }
+      .pdf-embed-wrapper { padding: 0 1.1rem 1.1rem; }
+      iframe.pdf-frame { height: 400px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Hero -->
+  <div class="hero">
+    <h1>Happy 75th,<br><em>George Ball Bob Marnell</em></h1>
+    <p class="subtitle">A tribute to the man, the legend, the sourdough whisperer.</p>
+  </div>
+
+  <div class="container">
+
+    <!-- Podcast Episode -->
+    <section>
+      <div class="section-label">Podcast Episode</div>
+
+      <div class="episode-card">
+        <div class="episode-header">
+          <div class="ep-icon warm">🍕</div>
+          <div class="ep-meta">
+            <span class="ep-type warm">Full Episode · ~20 min</span>
+            <div class="ep-title">Heritage Sourdough, Pizza Ovens &amp; Lawrence Welk</div>
+            <div class="ep-desc">A NotebookLM deep dive into George's world — the craft of sourdough, the science and soul of wood-fired pizza ovens, and the surprisingly rich legacy of Lawrence Welk. Equal parts technical and tender.</div>
+          </div>
+        </div>
+        <audio id="player-gb" controls preload="metadata">
+          <source src="audio/Heritage_Sourdough_Pizza_Ovens_and_Lawrence_Welk.m4a" type="audio/mp4">
+        </audio>
+        <div class="audio-extras">
+          <div class="speed-pills" data-player="player-gb">
+            <span class="speed-label">Speed</span>
+            <button type="button" data-speed="1" class="active">1×</button>
+            <button type="button" data-speed="1.5">1.5×</button>
+            <button type="button" data-speed="2">2×</button>
+          </div>
+          <a class="dl-link" href="audio/Heritage_Sourdough_Pizza_Ovens_and_Lawrence_Welk.m4a" download>↓ Download</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- YouTube -->
+    <section>
+      <div class="section-label">Also Worth Watching</div>
+      <div class="yt-card" data-yt-id="JiNubaPKT1Q">
+        <button type="button" class="yt-thumb" aria-label="Play video">
+          <img src="https://img.youtube.com/vi/JiNubaPKT1Q/hqdefault.jpg" alt="YouTube video thumbnail" loading="lazy">
+          <span class="yt-play">
+            <svg viewBox="0 0 68 48" xmlns="http://www.w3.org/2000/svg">
+              <path d="M66.5 7.6C65.7 4.7 63.4 2.4 60.5 1.6 55.2 0 34 0 34 0S12.8 0 7.5 1.6C4.6 2.4 2.3 4.7 1.5 7.6 0 12.9 0 24 0 24s0 11.1 1.5 16.4c.8 2.9 3.1 5.2 6 6C12.8 48 34 48 34 48s21.2 0 26.5-1.6c2.9-.8 5.2-3.1 6-6C68 35.1 68 24 68 24s0-11.1-1.5-16.4z" fill="rgba(0,0,0,0.75)"/>
+              <path d="M27 34l18-10-18-10v20z" fill="#fff"/>
+            </svg>
+          </span>
+        </button>
+        <div class="yt-caption">Lawrence Welk — The Maestro himself</div>
+      </div>
+    </section>
+
+    <!-- Context / Cheat Sheet -->
+    <section>
+      <div class="section-label">The Man, Briefly</div>
+      <div class="context-box">
+        <strong>George Ball Bob Marnell</strong> — engineer, patriarch, and 75 years deep into a life well-lived.<br><br>
+        <strong>His crafts:</strong> Sourdough baking at the level where he understands the microbiology. Pizza ovens where he understands the thermodynamics. Lawrence Welk where he understands something the rest of us are still working on.<br><br>
+        <strong>His legacy:</strong> An engineering career that built things meant to last, a family that proves the point, and enough sourdough wisdom to fill a slide deck — which, as it happens, it did.
+      </div>
+    </section>
+
+    <!-- Infographic -->
+    <section>
+      <div class="section-label">Infographic</div>
+      <p class="desc">AI-generated visual summary. Tap to expand.</p>
+      <div class="infographic-grid">
+        <div class="infographic-card">
+          <img src="img/Artisan_Oven_and_Yeast_Guide.png"
+               alt="Artisan Oven and Yeast Guide infographic"
+               onclick="openLightbox(this.src)">
+          <div class="infographic-caption">Artisan Oven &amp; Yeast Guide</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Engineering Legacy slide deck -->
+    <section>
+      <div class="section-label">The Slide Deck</div>
+      <div class="pdf-card">
+        <div class="pdf-header">
+          <div class="pdf-icon">📋</div>
+          <div class="pdf-meta">
+            <h3>Engineering Legacy</h3>
+            <p>AI-generated slide deck — a visual retrospective of George's life and craft</p>
+          </div>
+        </div>
+        <div class="slide-preview" id="slide-preview" data-pdf-src="pdf/Engineering_Legacy.pdf" aria-label="Slide thumbnails — tap to enlarge"></div>
+        <div class="pdf-actions">
+          <a class="btn btn-primary" href="pdf/Engineering_Legacy.pdf" download>
+            ↓ Download PDF
+          </a>
+          <button class="btn btn-secondary" onclick="togglePdfEmbed('pdf-frame','pdf-toggle-btn','pdf/Engineering_Legacy.pdf')" id="pdf-toggle-btn">
+            View inline
+          </button>
+        </div>
+        <div class="pdf-embed-wrapper">
+          <iframe class="pdf-frame" id="pdf-frame" src="" title="Engineering Legacy slide deck"></iframe>
+        </div>
+      </div>
+    </section>
+
+  </div><!-- /container -->
+
+  <!-- Lightbox -->
+  <div id="lightbox" onclick="closeLightbox()">
+    <button id="lightbox-close" onclick="closeLightbox()">×</button>
+    <img id="lightbox-img" src="" alt="">
+  </div>
+
+  <footer>
+    Happy 75th, George Ball Bob Marnell · In Queso Emergency · NotebookLM artifacts
+  </footer>
+
+  <script src="https://cdn.plyr.io/3.7.8/plyr.polyfilled.js"></script>
+  <script src="/assets/js/audio-player.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script>
+    const players = window.initAudioPlayers();
+
+    // Lightbox
+    function openLightbox(src) {
+      document.getElementById('lightbox-img').src = src;
+      document.getElementById('lightbox').classList.add('active');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeLightbox() {
+      document.getElementById('lightbox').classList.remove('active');
+      document.body.style.overflow = '';
+    }
+
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') closeLightbox();
+    });
+
+    // PDF embed toggle
+    const pdfLoaded = {};
+    function togglePdfEmbed(frameId, btnId, src) {
+      const frame = document.getElementById(frameId);
+      const btn = document.getElementById(btnId);
+      const isVisible = frame.classList.toggle('visible');
+      btn.textContent = isVisible ? 'Hide' : 'View inline';
+      if (isVisible && !pdfLoaded[frameId]) {
+        frame.src = src;
+        pdfLoaded[frameId] = true;
+      }
+    }
+
+    // Slide preview — lazy via IntersectionObserver
+    (function initSlidePreview() {
+      const container = document.getElementById('slide-preview');
+      if (!container || !window.pdfjsLib) return;
+      const pdfUrl = container.dataset.pdfSrc;
+      if (!pdfUrl) return;
+
+      pdfjsLib.GlobalWorkerOptions.workerSrc =
+        'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+      const loading = document.createElement('div');
+      loading.className = 'slide-preview-loading';
+      loading.textContent = 'Loading slide previews…';
+      container.appendChild(loading);
+
+      let loadedPdf = null;
+      let started = false;
+
+      async function renderThumbs() {
+        if (started) return;
+        started = true;
+        try {
+          loadedPdf = await pdfjsLib.getDocument(pdfUrl).promise;
+          loading.textContent = 'Rendering ' + loadedPdf.numPages + ' slides…';
+          const THUMB_W = 180;
+          const dpr = window.devicePixelRatio || 1;
+          for (let i = 1; i <= loadedPdf.numPages; i++) {
+            const page = await loadedPdf.getPage(i);
+            const base = page.getViewport({ scale: 1 });
+            const scale = THUMB_W / base.width;
+            const viewport = page.getViewport({ scale: scale * dpr });
+            const canvas = document.createElement('canvas');
+            canvas.width = viewport.width;
+            canvas.height = viewport.height;
+            canvas.style.width = (viewport.width / dpr) + 'px';
+            canvas.style.height = (viewport.height / dpr) + 'px';
+            await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'slide-thumb';
+            btn.setAttribute('aria-label', 'Slide ' + i + ' — tap to enlarge');
+            btn.appendChild(canvas);
+            const label = document.createElement('span');
+            label.className = 'slide-thumb-label';
+            label.textContent = i;
+            btn.appendChild(label);
+            btn.addEventListener('click', () => openSlideLightbox(i));
+            container.appendChild(btn);
+          }
+          loading.remove();
+        } catch (e) {
+          console.warn('Slide preview failed:', e);
+          container.remove();
+        }
+      }
+
+      async function openSlideLightbox(pageNum) {
+        if (!loadedPdf) return;
+        try {
+          const page = await loadedPdf.getPage(pageNum);
+          const targetW = Math.min(window.innerWidth * 0.95, 1600);
+          const base = page.getViewport({ scale: 1 });
+          const viewport = page.getViewport({ scale: targetW / base.width });
+          const canvas = document.createElement('canvas');
+          canvas.width = viewport.width;
+          canvas.height = viewport.height;
+          await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+          openLightbox(canvas.toDataURL('image/png'));
+        } catch (e) {
+          console.warn('Slide lightbox render failed:', e);
+        }
+      }
+
+      if ('IntersectionObserver' in window) {
+        const obs = new IntersectionObserver((entries) => {
+          if (entries.some(e => e.isIntersecting)) {
+            obs.disconnect();
+            renderThumbs();
+          }
+        }, { rootMargin: '400px' });
+        obs.observe(container);
+      } else {
+        renderThumbs();
+      }
+    })();
+
+    // YouTube — swap thumbnail for iframe on click, autoplay
+    document.querySelectorAll('[data-yt-id]').forEach(card => {
+      const id = card.dataset.ytId;
+      card.querySelector('.yt-thumb').addEventListener('click', function () {
+        const iframe = document.createElement('iframe');
+        iframe.src = `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0`;
+        iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
+        iframe.allowFullscreen = true;
+        iframe.style.cssText = 'width:100%;aspect-ratio:16/9;border:none;display:block;';
+        this.replaceWith(iframe);
+      });
+    });
+  </script>
+</body>
+</html>

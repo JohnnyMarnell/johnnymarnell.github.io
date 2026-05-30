@@ -559,7 +559,7 @@
             <div class="ep-desc">The tech-savvy long-form episode — how the AI/ML pipeline actually works: denoising diffusion, conditioning tensors, ProteinMPNN, AlphaFold 2 validation. Rooted in our boy's specific methods, for a general technical audience. Camp shout-out up front.</div>
           </div>
         </div>
-        <audio id="player-long" controls>
+        <audio id="player-long" controls preload="metadata">
           <source src="audio/AI_Hallucinates_Precision_Protein_Binders.m4a" type="audio/mp4">
         </audio>
         <div class="audio-extras">
@@ -583,7 +583,7 @@
             <div class="ep-desc">The full episode — covers the AI and ML techniques (RFdiffusion, ProteinMPNN, AlphaFold 2) in plain language. Rooted in our boy's exact research. Features a shout-out to the camp.</div>
           </div>
         </div>
-        <audio id="player-deep" controls>
+        <audio id="player-deep" controls preload="metadata">
           <source src="audio/AI_molecular_switchblades_for_undruggable_proteins.m4a" type="audio/mp4">
         </audio>
         <div class="audio-extras">
@@ -607,7 +607,7 @@
             <div class="ep-desc">The short version — what our boy built, why it matters for cancer, and why it's a big deal. Start here if you want the fast track before the defense.</div>
           </div>
         </div>
-        <audio id="player-brief" controls>
+        <audio id="player-brief" controls preload="metadata">
           <source src="audio/Precise_AI_protein_binders_for_cancer.m4a" type="audio/mp4">
         </audio>
         <div class="audio-extras">
@@ -717,34 +717,10 @@
   </footer>
 
   <script src="https://cdn.plyr.io/3.7.8/plyr.polyfilled.js"></script>
+  <script src="/assets/js/audio-player.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <script>
-    // Init Plyr players
-    const plyrConfig = {
-      controls: ['play', 'progress', 'current-time', 'duration', 'mute', 'volume', 'settings'],
-      settings: ['speed'],
-      speed: { selected: 1, options: [0.75, 1, 1.25, 1.5, 2] },
-    };
-    const players = {
-      'player-long': new Plyr('#player-long', plyrConfig),
-      'player-deep': new Plyr('#player-deep', plyrConfig),
-      'player-brief': new Plyr('#player-brief', plyrConfig),
-    };
-
-    // Wire custom speed pills → Plyr instance, and reflect cog changes back into pills
-    document.querySelectorAll('.speed-pills').forEach(group => {
-      const player = players[group.dataset.player];
-      if (!player) return;
-      const buttons = group.querySelectorAll('button');
-      const sync = () => {
-        const s = player.speed;
-        buttons.forEach(b => b.classList.toggle('active', parseFloat(b.dataset.speed) === s));
-      };
-      buttons.forEach(btn => {
-        btn.addEventListener('click', () => { player.speed = parseFloat(btn.dataset.speed); });
-      });
-      player.on('ratechange', sync);
-    });
+    const players = window.initAudioPlayers();
 
     // Lightbox
     function openLightbox(src) {
