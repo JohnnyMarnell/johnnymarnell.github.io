@@ -1,6 +1,6 @@
 {
   "title": "BK Deep Playa Bike Ride",
-  "generated_at": "2026-08-24T21:25:20.132768+00:00",
+  "generated_at": "2026-08-24T22:26:15.549234+00:00",
   "devices": [
     {
       "key": "Apple iPhone 17 Pro",
@@ -353,7 +353,7 @@
       "thumb": "media/thumb/78998e3d34dd.jpg"
     },
     {
-      "id": "70934adf7610",
+      "id": "d7e1ed3924f0",
       "kind": "video",
       "orig_name": "IMG_1788.MOV",
       "device": "Apple iPhone 17 Pro",
@@ -363,10 +363,10 @@
       "ts": "2026-08-22T00:55:20+00:00",
       "ts_local": "2026-08-21T20:55:20-04:00",
       "duration": 10.93,
-      "width": 352,
-      "height": 200,
-      "src": "media/web/70934adf7610.mp4",
-      "thumb": "media/thumb/70934adf7610.jpg"
+      "width": 1920,
+      "height": 1080,
+      "src": "media/web/d7e1ed3924f0.mp4",
+      "thumb": "media/thumb/d7e1ed3924f0.jpg"
     },
     {
       "id": "d6afad647c32",
