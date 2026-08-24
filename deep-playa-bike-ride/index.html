@@ -1,0 +1,542 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex">
+<meta name="referrer" content="no-referrer">
+<title>event map</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
+<style>
+  :root {
+    --bg: #0f1115;
+    --panel: #171a21;
+    --panel-2: #1f2330;
+    --border: #2a2f3d;
+    --text: #e8ecf3;
+    --muted: #9aa3b2;
+    --accent: #4b7bec;
+    --timeline-h: 96px;
+    --sidebar-w: 380px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; height: 100%;
+    background: var(--bg); color: var(--text);
+    font: 14px/1.4 -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+  #app {
+    position: fixed; inset: 0;
+    display: grid;
+    grid-template-columns: 1fr var(--sidebar-w);
+    grid-template-rows: 1fr var(--timeline-h);
+  }
+  #map { grid-column: 1; grid-row: 1; background: #222; }
+  #sidebar {
+    grid-column: 2; grid-row: 1 / span 2;
+    background: var(--panel);
+    border-left: 1px solid var(--border);
+    overflow: hidden; display: flex; flex-direction: column;
+  }
+  #timeline {
+    grid-column: 1; grid-row: 2;
+    background: var(--panel);
+    border-top: 1px solid var(--border);
+    position: relative; overflow: hidden;
+  }
+  .sidebar-hdr {
+    padding: 12px 14px 10px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .sidebar-hdr h1 { margin: 0; font-size: 15px; font-weight: 600; flex: 1; }
+  .sidebar-hdr .count { color: var(--muted); font-size: 12px; }
+  .btn {
+    background: var(--panel-2); color: var(--text);
+    border: 1px solid var(--border); border-radius: 6px;
+    padding: 4px 10px; font: inherit; cursor: pointer;
+  }
+  .btn:hover { border-color: var(--accent); }
+  .sidebar-body { flex: 1; overflow-y: auto; }
+
+  .devices { padding: 10px 14px; border-bottom: 1px solid var(--border); }
+  .devices h2 { margin: 0 0 6px; font-size: 11px; text-transform: uppercase;
+    letter-spacing: .04em; color: var(--muted); font-weight: 600; }
+  .device-row {
+    display: flex; align-items: center; gap: 8px; padding: 4px 0;
+    cursor: pointer; user-select: none;
+  }
+  .device-row .swatch {
+    width: 14px; height: 14px; border-radius: 50%;
+    flex-shrink: 0; border: 2px solid rgba(255,255,255,.15);
+  }
+  .device-row .name { flex: 1; font-size: 13px; }
+  .device-row .n { color: var(--muted); font-size: 12px; }
+  .device-row.off { opacity: .35; }
+
+  .item-list { padding: 4px 0; }
+  .item-row {
+    display: flex; gap: 10px; padding: 8px 14px;
+    border-bottom: 1px solid rgba(255,255,255,.04); cursor: pointer;
+  }
+  .item-row:hover { background: rgba(255,255,255,.03); }
+  .item-row.active { background: rgba(75,123,236,.14); }
+  .item-row .thumb {
+    width: 68px; height: 44px; border-radius: 4px;
+    background: #000 center/cover no-repeat; flex-shrink: 0;
+    position: relative;
+  }
+  .item-row .kind {
+    position: absolute; bottom: 2px; right: 2px;
+    background: rgba(0,0,0,.7); border-radius: 3px;
+    font-size: 10px; padding: 0 4px; color: #fff;
+  }
+  .item-row .meta { flex: 1; min-width: 0; }
+  .item-row .meta .top { display: flex; align-items: center; gap: 6px; }
+  .item-row .meta .dev-dot {
+    width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+  }
+  .item-row .meta .name {
+    font-weight: 500; font-size: 13px; white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis;
+  }
+  .item-row .meta .sub {
+    color: var(--muted); font-size: 12px; margin-top: 2px;
+  }
+
+  .detail { padding: 14px; }
+  .detail .media-wrap {
+    background: #000; border-radius: 6px; overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 12px; max-height: 60vh;
+  }
+  .detail img, .detail video { max-width: 100%; max-height: 60vh; display: block; }
+  .detail audio { width: 100%; }
+  .detail .nav {
+    display: flex; justify-content: space-between; gap: 8px; margin-bottom: 10px;
+  }
+  .detail .kv { font-size: 12px; color: var(--muted); }
+  .detail .kv b { color: var(--text); font-weight: 500; }
+  .detail .kv div { padding: 2px 0; }
+  .detail .title {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 14px; font-weight: 600; margin-bottom: 8px;
+  }
+  .detail .title .dev-dot {
+    width: 10px; height: 10px; border-radius: 50%;
+  }
+
+  /* Custom cluster icons */
+  .cluster-ico {
+    border-radius: 50%; color: #fff; text-align: center;
+    font-weight: 600; font-size: 12px;
+    display: flex; align-items: center; justify-content: center;
+    border: 2px solid rgba(255,255,255,.9);
+    box-shadow: 0 2px 8px rgba(0,0,0,.4);
+  }
+  .marker-ico {
+    border-radius: 50%; border: 2px solid #fff;
+    box-shadow: 0 1px 4px rgba(0,0,0,.5);
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 11px;
+  }
+  .marker-ico.active { transform: scale(1.35); z-index: 1000 !important; border-color: #fff; }
+
+  /* Timeline */
+  #timeline .axis {
+    position: absolute; left: 0; right: 0; bottom: 0; height: 22px;
+    color: var(--muted); font-size: 11px;
+  }
+  #timeline .track {
+    position: absolute; left: 0; right: 0; top: 8px; bottom: 26px;
+  }
+  #timeline .dot {
+    position: absolute; width: 8px; height: 8px; border-radius: 50%;
+    transform: translate(-50%, -50%); top: 50%;
+    border: 1px solid rgba(255,255,255,.4);
+  }
+  #timeline .dot.hidden { opacity: .15; }
+  #timeline .dot.active {
+    transform: translate(-50%, -50%) scale(1.6); z-index: 2;
+    border-color: #fff;
+  }
+  #timeline .brush {
+    position: absolute; top: 0; bottom: 22px;
+    background: rgba(75,123,236,.15);
+    border-left: 2px solid var(--accent);
+    border-right: 2px solid var(--accent);
+    pointer-events: none;
+  }
+  #timeline .tick {
+    position: absolute; bottom: 6px; transform: translateX(-50%);
+    white-space: nowrap;
+  }
+  #timeline .now {
+    position: absolute; top: 0; bottom: 22px; width: 2px;
+    background: #fff; opacity: .5; pointer-events: none;
+  }
+  #timeline .hover-shim { position: absolute; inset: 0; cursor: crosshair; }
+
+  .empty {
+    padding: 30px 14px; text-align: center; color: var(--muted); font-size: 13px;
+  }
+
+  /* Path polyline appears greyish through Leaflet's SVG layer */
+  .leaflet-container { background: #1a1d24; }
+  .leaflet-tile { filter: none; }
+  .leaflet-control-attribution {
+    background: rgba(15,17,21,.7) !important; color: var(--muted) !important;
+  }
+  .leaflet-control-attribution a { color: var(--muted) !important; }
+  .leaflet-bar a {
+    background: var(--panel-2); color: var(--text); border-bottom-color: var(--border);
+  }
+  .leaflet-bar a:hover { background: var(--panel); }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="map"></div>
+  <aside id="sidebar">
+    <div class="sidebar-hdr">
+      <h1 id="page-title">event</h1>
+      <span class="count" id="count-badge"></span>
+      <button class="btn" id="reset-btn" title="clear selection">reset</button>
+    </div>
+    <div class="devices" id="devices"></div>
+    <div class="sidebar-body" id="body"></div>
+  </aside>
+  <div id="timeline">
+    <div class="track" id="track"></div>
+    <div class="axis" id="axis"></div>
+    <div class="hover-shim" id="hover-shim"></div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<script>
+(async () => {
+  const manifest = await fetch('manifest.json?_=' + Date.now()).then(r => r.json());
+  document.getElementById('page-title').textContent = manifest.title || 'event';
+  document.title = manifest.title || 'event';
+
+  const items = manifest.items;
+  if (!items.length) {
+    document.getElementById('body').innerHTML =
+      '<div class="empty">manifest has no geolocated items</div>';
+    return;
+  }
+  items.forEach((it, i) => { it._i = i; it._t = new Date(it.ts).getTime(); });
+
+  const activeDevices = new Set(manifest.devices.map(d => d.key));
+  const deviceColor = Object.fromEntries(manifest.devices.map(d => [d.key, d.color]));
+  const iconFor = { photo: '📷', video: '▶', audio: '♪' };
+
+  // ---- Map ---------------------------------------------------------------
+  const map = L.map('map', { zoomControl: true, worldCopyJump: true });
+  const bounds = L.latLngBounds(items.map(it => [it.lat, it.lon]));
+  map.fitBounds(bounds.pad(0.15));
+
+  const baseLayers = {
+    'Positron (light-on-dark clean)': L.tileLayer(
+      'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+      { subdomains: 'abcd', maxZoom: 20,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>' }),
+    'OpenStreetMap': L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+      { maxZoom: 19,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' }),
+    'Satellite (Esri)': L.tileLayer(
+      'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+      { maxZoom: 19,
+        attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community' }),
+  };
+  baseLayers['Positron (light-on-dark clean)'].addTo(map);
+  L.control.layers(baseLayers, {}, { position: 'topleft', collapsed: true }).addTo(map);
+
+  // Chronological path polyline
+  const sorted = [...items].sort((a, b) => a._t - b._t);
+  const path = L.polyline(sorted.map(it => [it.lat, it.lon]),
+    { color: '#ffffff', opacity: 0.35, weight: 2, dashArray: '4,6' }).addTo(map);
+
+  // Marker cluster
+  const cluster = L.markerClusterGroup({
+    maxClusterRadius: 60,
+    spiderfyOnMaxZoom: true,
+    showCoverageOnHover: false,
+    iconCreateFunction: c => {
+      // build pie of device colors
+      const kids = c.getAllChildMarkers();
+      const counts = {};
+      kids.forEach(m => {
+        const d = m.options._item.device;
+        counts[d] = (counts[d] || 0) + 1;
+      });
+      const n = kids.length;
+      // gradient background: series of conic segments
+      const stops = [];
+      let acc = 0;
+      Object.entries(counts).forEach(([d, k]) => {
+        const col = deviceColor[d] || '#888';
+        const pct = (k / n) * 100;
+        stops.push(`${col} ${acc}% ${acc + pct}%`);
+        acc += pct;
+      });
+      const size = Math.min(56, 28 + Math.log2(n) * 6);
+      const style = `background: conic-gradient(${stops.join(',')}); width:${size}px;height:${size}px;`;
+      return L.divIcon({
+        html: `<div class="cluster-ico" style="${style}"><span style="background:rgba(0,0,0,.55);padding:2px 6px;border-radius:10px">${n}</span></div>`,
+        className: '', iconSize: [size, size],
+      });
+    },
+  }).addTo(map);
+
+  const markers = new Map();
+  function markerIcon(it, active = false) {
+    const size = it.kind === 'video' ? 24 : it.kind === 'audio' ? 22 : 20;
+    return L.divIcon({
+      html: `<div class="marker-ico ${active ? 'active' : ''}" style="background:${it.color};width:${size}px;height:${size}px">${iconFor[it.kind] || '•'}</div>`,
+      className: '', iconSize: [size, size],
+    });
+  }
+
+  items.forEach(it => {
+    const m = L.marker([it.lat, it.lon], { icon: markerIcon(it), _item: it });
+    m.on('click', () => select(it));
+    markers.set(it.id, m);
+    cluster.addLayer(m);
+  });
+
+  cluster.on('clusterclick', e => {
+    const kids = e.layer.getAllChildMarkers().map(m => m.options._item);
+    kids.sort((a, b) => a._t - b._t);
+    renderList(kids, 'cluster of ' + kids.length);
+  });
+
+  // ---- Sidebar / list / detail ------------------------------------------
+  const body = document.getElementById('body');
+  const countBadge = document.getElementById('count-badge');
+  let selectedId = null;
+
+  function fmtTime(iso) {
+    const d = new Date(iso);
+    return d.toLocaleString([], {
+      month: 'short', day: 'numeric',
+      hour: 'numeric', minute: '2-digit',
+    });
+  }
+  function fmtDur(s) {
+    if (s == null) return '';
+    const m = Math.floor(s / 60), r = Math.round(s % 60);
+    return m ? `${m}m${r.toString().padStart(2,'0')}s` : `${s.toFixed(1)}s`;
+  }
+
+  function renderList(list, header) {
+    selectedId = null;
+    updateMarkerActiveState();
+    const rows = list.map(it => `
+      <div class="item-row" data-id="${it.id}">
+        <div class="thumb" style="background-image:url('${it.thumb}')">
+          <span class="kind">${iconFor[it.kind]}</span>
+        </div>
+        <div class="meta">
+          <div class="top">
+            <span class="dev-dot" style="background:${it.color}"></span>
+            <span class="name" title="${it.orig_name}">${it.orig_name}</span>
+          </div>
+          <div class="sub">${fmtTime(it.ts)} · ${it.device}${it.duration ? ' · ' + fmtDur(it.duration) : ''}</div>
+        </div>
+      </div>`).join('');
+    body.innerHTML = `<div class="item-list">${rows || '<div class="empty">no items</div>'}</div>`;
+    countBadge.textContent = header || `${list.length} items`;
+    body.querySelectorAll('.item-row').forEach(r =>
+      r.onclick = () => select(items.find(i => i.id === r.dataset.id)));
+  }
+
+  function renderDetail(it) {
+    selectedId = it.id;
+    updateMarkerActiveState();
+    const idx = sorted.findIndex(x => x.id === it.id);
+    const prev = sorted[(idx - 1 + sorted.length) % sorted.length];
+    const next = sorted[(idx + 1) % sorted.length];
+    let media = '';
+    if (it.kind === 'photo') {
+      media = `<img src="${it.src}" alt="${it.orig_name}">`;
+    } else if (it.kind === 'video') {
+      media = `<video src="${it.src}" controls autoplay playsinline poster="${it.thumb}"></video>`;
+    } else {
+      media = `<div style="padding:30px;text-align:center;width:100%">
+        <img src="${it.thumb}" style="max-width:100%;opacity:.6"><br>
+        <audio src="${it.src}" controls autoplay></audio></div>`;
+    }
+    body.innerHTML = `
+      <div class="detail">
+        <div class="nav">
+          <button class="btn" id="prev-btn">← prev</button>
+          <button class="btn" id="back-btn">list</button>
+          <button class="btn" id="next-btn">next →</button>
+        </div>
+        <div class="title">
+          <span class="dev-dot" style="background:${it.color}"></span>
+          <span>${it.orig_name}</span>
+        </div>
+        <div class="media-wrap">${media}</div>
+        <div class="kv">
+          <div><b>when</b> ${new Date(it.ts).toLocaleString()}</div>
+          <div><b>device</b> ${it.device || 'unknown'}</div>
+          <div><b>coords</b> ${it.lat.toFixed(6)}, ${it.lon.toFixed(6)}
+            &nbsp;<a href="https://www.google.com/maps?q=${it.lat},${it.lon}" target="_blank" style="color:var(--accent)">↗</a></div>
+          ${it.duration ? `<div><b>duration</b> ${fmtDur(it.duration)}</div>` : ''}
+          ${it.width ? `<div><b>size</b> ${it.width}×${it.height}</div>` : ''}
+        </div>
+      </div>`;
+    document.getElementById('prev-btn').onclick = () => select(prev);
+    document.getElementById('next-btn').onclick = () => select(next);
+    document.getElementById('back-btn').onclick = () => renderList(visibleItems(), null);
+    countBadge.textContent = `${idx + 1} / ${sorted.length}`;
+  }
+
+  function updateMarkerActiveState() {
+    markers.forEach((m, id) => {
+      const it = items.find(i => i.id === id);
+      m.setIcon(markerIcon(it, id === selectedId));
+    });
+    document.querySelectorAll('#timeline .dot').forEach(d =>
+      d.classList.toggle('active', d.dataset.id === selectedId));
+  }
+
+  function select(it) {
+    if (!it) return;
+    renderDetail(it);
+    map.flyTo([it.lat, it.lon], Math.max(map.getZoom(), 16), { duration: 0.6 });
+  }
+
+  document.getElementById('reset-btn').onclick = () => {
+    selectedId = null;
+    map.flyToBounds(bounds.pad(0.15));
+    renderList(visibleItems(), null);
+  };
+
+  // ---- Devices panel -----------------------------------------------------
+  function renderDevices() {
+    const counts = {};
+    items.forEach(it => counts[it.device] = (counts[it.device] || 0) + 1);
+    const dev = document.getElementById('devices');
+    dev.innerHTML = `<h2>devices</h2>` + manifest.devices.map(d => `
+      <div class="device-row ${activeDevices.has(d.key) ? '' : 'off'}" data-key="${d.key}">
+        <div class="swatch" style="background:${d.color}"></div>
+        <div class="name">${d.key || 'unknown'}</div>
+        <div class="n">${counts[d.key] || 0}</div>
+      </div>`).join('');
+    dev.querySelectorAll('.device-row').forEach(r => r.onclick = () => {
+      const k = r.dataset.key;
+      if (activeDevices.has(k)) activeDevices.delete(k); else activeDevices.add(k);
+      applyFilter();
+      renderDevices();
+    });
+  }
+
+  // ---- Timeline (brushable) ---------------------------------------------
+  const track = document.getElementById('track');
+  const axis = document.getElementById('axis');
+  const tRange = { min: Math.min(...items.map(i => i._t)),
+                   max: Math.max(...items.map(i => i._t)) };
+  let brush = { a: tRange.min, b: tRange.max };
+
+  function buildTimeline() {
+    track.innerHTML = '';
+    const w = track.clientWidth;
+    const span = tRange.max - tRange.min || 1;
+    items.forEach(it => {
+      const dot = document.createElement('div');
+      dot.className = 'dot';
+      dot.dataset.id = it.id;
+      dot.style.left = (((it._t - tRange.min) / span) * w) + 'px';
+      dot.style.background = it.color;
+      dot.title = `${fmtTime(it.ts)} · ${it.orig_name}`;
+      dot.onclick = () => select(it);
+      track.appendChild(dot);
+    });
+    // axis ticks
+    axis.innerHTML = '';
+    const ticks = 5;
+    for (let i = 0; i <= ticks; i++) {
+      const t = tRange.min + (span * i / ticks);
+      const el = document.createElement('div');
+      el.className = 'tick';
+      el.style.left = ((i / ticks) * w) + 'px';
+      el.textContent = fmtTime(new Date(t).toISOString());
+      axis.appendChild(el);
+    }
+    drawBrush();
+  }
+
+  function drawBrush() {
+    const w = track.clientWidth;
+    const span = tRange.max - tRange.min || 1;
+    let el = document.querySelector('#timeline .brush');
+    if (!el) { el = document.createElement('div'); el.className = 'brush'; document.getElementById('timeline').appendChild(el); }
+    const x1 = ((brush.a - tRange.min) / span) * w;
+    const x2 = ((brush.b - tRange.min) / span) * w;
+    el.style.left = Math.min(x1, x2) + 'px';
+    el.style.width = Math.abs(x2 - x1) + 'px';
+  }
+
+  function visibleItems() {
+    return items.filter(it =>
+      activeDevices.has(it.device) &&
+      it._t >= Math.min(brush.a, brush.b) &&
+      it._t <= Math.max(brush.a, brush.b));
+  }
+
+  function applyFilter() {
+    const vis = new Set(visibleItems().map(i => i.id));
+    cluster.clearLayers();
+    markers.forEach((m, id) => { if (vis.has(id)) cluster.addLayer(m); });
+    path.setLatLngs(sorted.filter(i => vis.has(i.id)).map(i => [i.lat, i.lon]));
+    document.querySelectorAll('#timeline .dot').forEach(d =>
+      d.classList.toggle('hidden', !vis.has(d.dataset.id)));
+    if (!selectedId) renderList(visibleItems(), null);
+  }
+
+  // Brush dragging
+  const shim = document.getElementById('hover-shim');
+  let dragging = null;
+  shim.addEventListener('mousedown', e => {
+    const w = track.clientWidth;
+    const span = tRange.max - tRange.min || 1;
+    const t = tRange.min + (e.offsetX / w) * span;
+    dragging = { start: t };
+    brush = { a: t, b: t };
+    drawBrush();
+  });
+  window.addEventListener('mousemove', e => {
+    if (!dragging) return;
+    const rect = shim.getBoundingClientRect();
+    const w = track.clientWidth;
+    const span = tRange.max - tRange.min || 1;
+    let x = e.clientX - rect.left;
+    x = Math.max(0, Math.min(w, x));
+    const t = tRange.min + (x / w) * span;
+    brush.b = t;
+    drawBrush();
+  });
+  window.addEventListener('mouseup', () => {
+    if (!dragging) return;
+    if (Math.abs(brush.a - brush.b) < (tRange.max - tRange.min) * 0.01) {
+      brush = { a: tRange.min, b: tRange.max };
+      drawBrush();
+    }
+    dragging = null;
+    applyFilter();
+  });
+
+  // ---- Init --------------------------------------------------------------
+  renderDevices();
+  buildTimeline();
+  applyFilter();
+  window.addEventListener('resize', () => { buildTimeline(); });
+})();
+</script>
+</body>
+</html>
