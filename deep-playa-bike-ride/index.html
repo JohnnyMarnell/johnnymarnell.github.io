@@ -405,8 +405,11 @@
   const markers = new Map();
   function markerIcon(it, active = false) {
     const size = it.kind === 'video' ? 24 : it.kind === 'audio' ? 22 : 20;
+    // Dashed border on inferred-GPS markers so it's clear the location is
+    // borrowed from a nearby-in-time item that had real GPS.
+    const dashed = it.gps_inferred ? 'border-style:dashed;' : '';
     return L.divIcon({
-      html: `<div class="marker-ico ${active ? 'active' : ''}" style="background:${it.color};width:${size}px;height:${size}px">${iconFor[it.kind] || '•'}</div>`,
+      html: `<div class="marker-ico ${active ? 'active' : ''}" style="background:${it.color};width:${size}px;height:${size}px;${dashed}">${iconFor[it.kind] || '•'}</div>`,
       className: '', iconSize: [size, size],
     });
   }
@@ -498,7 +501,9 @@
             <div><b>when</b>${new Date(it.ts).toLocaleString()}</div>
             <div><b>device</b>${it.device || 'unknown'}</div>
             <div><b>coords</b>${it.lat.toFixed(6)}, ${it.lon.toFixed(6)}
-              &nbsp;<a href="https://www.google.com/maps?q=${it.lat},${it.lon}" target="_blank" rel="noopener">google maps ↗</a></div>
+              &nbsp;<a href="https://www.google.com/maps?q=${it.lat},${it.lon}" target="_blank" rel="noopener">google maps ↗</a>
+              ${it.gps_inferred ? `<div style="padding-left:52px;color:var(--muted);font-style:italic">inferred from <b>${it.gps_source}</b> (±${it.gps_delta_s}s)</div>` : ''}
+            </div>
             ${it.duration ? `<div><b>duration</b>${fmtDur(it.duration)}</div>` : ''}
             ${it.width ? `<div><b>size</b>${it.width}×${it.height}</div>` : ''}
           </div>
