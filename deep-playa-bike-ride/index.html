@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex">
 <meta name="referrer" content="no-referrer">
 <title>event map</title>
@@ -22,9 +22,11 @@
     --sidebar-w: 380px;
   }
   * { box-sizing: border-box; }
-  html, body { margin: 0; padding: 0; height: 100%;
+  html, body {
+    margin: 0; padding: 0; height: 100%;
     background: var(--bg); color: var(--text);
     font: 14px/1.4 -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    overscroll-behavior: none;
   }
   #app {
     position: fixed; inset: 0;
@@ -37,33 +39,38 @@
     grid-column: 2; grid-row: 1 / span 2;
     background: var(--panel);
     border-left: 1px solid var(--border);
-    overflow: hidden; display: flex; flex-direction: column;
+    overflow: hidden; display: flex; flex-direction: column; min-height: 0;
   }
   #timeline {
     grid-column: 1; grid-row: 2;
     background: var(--panel);
     border-top: 1px solid var(--border);
     position: relative; overflow: hidden;
+    touch-action: none;   /* let us capture pointer for brush */
   }
   .sidebar-hdr {
     padding: 12px 14px 10px; border-bottom: 1px solid var(--border);
     display: flex; align-items: center; gap: 10px;
+    background: var(--panel); position: sticky; top: 0; z-index: 4;
   }
   .sidebar-hdr h1 { margin: 0; font-size: 15px; font-weight: 600; flex: 1; }
-  .sidebar-hdr .count { color: var(--muted); font-size: 12px; }
+  .sidebar-hdr .count { color: var(--muted); font-size: 12px; white-space: nowrap; }
   .btn {
     background: var(--panel-2); color: var(--text);
     border: 1px solid var(--border); border-radius: 6px;
-    padding: 4px 10px; font: inherit; cursor: pointer;
+    padding: 6px 10px; font: inherit; cursor: pointer;
+    min-height: 32px;
   }
   .btn:hover { border-color: var(--accent); }
-  .sidebar-body { flex: 1; overflow-y: auto; }
+  .sidebar-body { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
 
   .devices { padding: 10px 14px; border-bottom: 1px solid var(--border); }
-  .devices h2 { margin: 0 0 6px; font-size: 11px; text-transform: uppercase;
-    letter-spacing: .04em; color: var(--muted); font-weight: 600; }
+  .devices h2 {
+    margin: 0 0 6px; font-size: 11px; text-transform: uppercase;
+    letter-spacing: .04em; color: var(--muted); font-weight: 600;
+  }
   .device-row {
-    display: flex; align-items: center; gap: 8px; padding: 4px 0;
+    display: flex; align-items: center; gap: 8px; padding: 6px 0;
     cursor: pointer; user-select: none;
   }
   .device-row .swatch {
@@ -76,57 +83,55 @@
 
   .item-list { padding: 4px 0; }
   .item-row {
-    display: flex; gap: 10px; padding: 8px 14px;
-    border-bottom: 1px solid rgba(255,255,255,.04); cursor: pointer;
+    border-bottom: 1px solid rgba(255,255,255,.04);
   }
-  .item-row:hover { background: rgba(255,255,255,.03); }
-  .item-row.active { background: rgba(75,123,236,.14); }
-  .item-row .thumb {
+  .row-head {
+    display: flex; gap: 10px; padding: 10px 14px;
+    cursor: pointer; align-items: center;
+  }
+  .row-head:hover { background: rgba(255,255,255,.03); }
+  .item-row.expanded > .row-head { background: rgba(75,123,236,.14); }
+  .row-head .thumb {
     width: 68px; height: 44px; border-radius: 4px;
     background: #000 center/cover no-repeat; flex-shrink: 0;
     position: relative;
   }
-  .item-row .kind {
+  .row-head .thumb .kind {
     position: absolute; bottom: 2px; right: 2px;
     background: rgba(0,0,0,.7); border-radius: 3px;
     font-size: 10px; padding: 0 4px; color: #fff;
   }
-  .item-row .meta { flex: 1; min-width: 0; }
-  .item-row .meta .top { display: flex; align-items: center; gap: 6px; }
-  .item-row .meta .dev-dot {
-    width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+  .row-head .meta { flex: 1; min-width: 0; }
+  .row-head .meta .top { display: flex; align-items: center; gap: 6px; }
+  .row-head .meta .dev-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .row-head .meta .name {
+    font-weight: 500; font-size: 13px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
-  .item-row .meta .name {
-    font-weight: 500; font-size: 13px; white-space: nowrap;
-    overflow: hidden; text-overflow: ellipsis;
-  }
-  .item-row .meta .sub {
-    color: var(--muted); font-size: 12px; margin-top: 2px;
-  }
+  .row-head .meta .sub { color: var(--muted); font-size: 12px; margin-top: 2px; }
 
-  .detail { padding: 14px; }
-  .detail .media-wrap {
+  .expanded-body {
+    padding: 4px 14px 14px 14px;
+    background: rgba(75,123,236,.06);
+    border-top: 1px solid rgba(75,123,236,.15);
+  }
+  .expanded-body .media-wrap {
     background: #000; border-radius: 6px; overflow: hidden;
     display: flex; align-items: center; justify-content: center;
-    margin-bottom: 12px; max-height: 60vh;
+    margin-bottom: 10px; max-height: 60vh;
   }
-  .detail img, .detail video { max-width: 100%; max-height: 60vh; display: block; }
-  .detail audio { width: 100%; }
-  .detail .nav {
-    display: flex; justify-content: space-between; gap: 8px; margin-bottom: 10px;
+  .expanded-body img, .expanded-body video {
+    max-width: 100%; max-height: 60vh; display: block;
   }
-  .detail .kv { font-size: 12px; color: var(--muted); }
-  .detail .kv b { color: var(--text); font-weight: 500; }
-  .detail .kv div { padding: 2px 0; }
-  .detail .title {
-    display: flex; align-items: center; gap: 8px;
-    font-size: 14px; font-weight: 600; margin-bottom: 8px;
-  }
-  .detail .title .dev-dot {
-    width: 10px; height: 10px; border-radius: 50%;
+  .expanded-body audio { width: 100%; }
+  .expanded-body .kv { font-size: 12px; color: var(--muted); margin-top: 6px; }
+  .expanded-body .kv b { color: var(--text); font-weight: 500; margin-right: 6px; }
+  .expanded-body .kv div { padding: 2px 0; }
+  .expanded-body .kv a { color: var(--accent); text-decoration: none; }
+  .expanded-body .nav {
+    display: flex; justify-content: space-between; gap: 8px; margin-top: 10px;
   }
 
-  /* Custom cluster icons */
   .cluster-ico {
     border-radius: 50%; color: #fff; text-align: center;
     font-weight: 600; font-size: 12px;
@@ -140,50 +145,57 @@
     display: flex; align-items: center; justify-content: center;
     color: #fff; font-size: 11px;
   }
-  .marker-ico.active { transform: scale(1.35); z-index: 1000 !important; border-color: #fff; }
+  .marker-ico.active {
+    transform: scale(1.4); z-index: 1000 !important;
+    box-shadow: 0 0 0 3px var(--accent), 0 1px 6px rgba(0,0,0,.6);
+  }
 
   /* Timeline */
-  #timeline .axis {
-    position: absolute; left: 0; right: 0; bottom: 0; height: 22px;
-    color: var(--muted); font-size: 11px;
-  }
   #timeline .track {
-    position: absolute; left: 0; right: 0; top: 8px; bottom: 26px;
+    position: absolute; left: 8px; right: 8px; top: 10px; bottom: 26px;
   }
   #timeline .dot {
     position: absolute; width: 8px; height: 8px; border-radius: 50%;
     transform: translate(-50%, -50%); top: 50%;
     border: 1px solid rgba(255,255,255,.4);
+    cursor: pointer;
   }
-  #timeline .dot.hidden { opacity: .15; }
+  #timeline .dot.hidden { opacity: .18; }
   #timeline .dot.active {
-    transform: translate(-50%, -50%) scale(1.6); z-index: 2;
+    transform: translate(-50%, -50%) scale(1.7); z-index: 3;
     border-color: #fff;
   }
   #timeline .brush {
-    position: absolute; top: 0; bottom: 22px;
-    background: rgba(75,123,236,.15);
+    position: absolute; top: 8px; bottom: 26px;
+    background: rgba(75,123,236,.18);
     border-left: 2px solid var(--accent);
     border-right: 2px solid var(--accent);
     pointer-events: none;
+  }
+  #timeline .selection-band {
+    position: absolute; top: 4px; bottom: 26px;
+    background: rgba(255,255,255,.06);
+    border: 1px dashed rgba(255,255,255,.5);
+    border-radius: 3px;
+    pointer-events: none;
+    z-index: 2;
+  }
+  #timeline .axis {
+    position: absolute; left: 0; right: 0; bottom: 0; height: 22px;
+    color: var(--muted); font-size: 11px;
   }
   #timeline .tick {
     position: absolute; bottom: 6px; transform: translateX(-50%);
     white-space: nowrap;
   }
-  #timeline .now {
-    position: absolute; top: 0; bottom: 22px; width: 2px;
-    background: #fff; opacity: .5; pointer-events: none;
-  }
   #timeline .hover-shim { position: absolute; inset: 0; cursor: crosshair; }
 
   .empty {
-    padding: 30px 14px; text-align: center; color: var(--muted); font-size: 13px;
+    padding: 30px 14px; text-align: center;
+    color: var(--muted); font-size: 13px;
   }
 
-  /* Path polyline appears greyish through Leaflet's SVG layer */
   .leaflet-container { background: #1a1d24; }
-  .leaflet-tile { filter: none; }
   .leaflet-control-attribution {
     background: rgba(15,17,21,.7) !important; color: var(--muted) !important;
   }
@@ -192,6 +204,25 @@
     background: var(--panel-2); color: var(--text); border-bottom-color: var(--border);
   }
   .leaflet-bar a:hover { background: var(--panel); }
+
+  /* --- Mobile --- */
+  @media (max-width: 768px) {
+    :root { --sidebar-w: 100%; --timeline-h: 64px; }
+    #app {
+      grid-template-columns: 1fr;
+      grid-template-rows: 46vh var(--timeline-h) 1fr;
+    }
+    #map { grid-column: 1; grid-row: 1; }
+    #timeline { grid-column: 1; grid-row: 2; }
+    #sidebar {
+      grid-column: 1; grid-row: 3;
+      border-left: none; border-top: 1px solid var(--border);
+    }
+    .btn { padding: 8px 12px; min-height: 40px; }
+    .row-head { padding: 12px 14px; }
+    .row-head .thumb { width: 74px; height: 50px; }
+    #timeline .dot { width: 12px; height: 12px; }
+  }
 </style>
 </head>
 <body>
@@ -201,10 +232,12 @@
     <div class="sidebar-hdr">
       <h1 id="page-title">event</h1>
       <span class="count" id="count-badge"></span>
-      <button class="btn" id="reset-btn" title="clear selection">reset</button>
+      <button class="btn" id="reset-btn" title="reset view, filters & selection">reset</button>
     </div>
-    <div class="devices" id="devices"></div>
-    <div class="sidebar-body" id="body"></div>
+    <div class="sidebar-body" id="body">
+      <div class="devices" id="devices"></div>
+      <div id="list-wrap"></div>
+    </div>
   </aside>
   <div id="timeline">
     <div class="track" id="track"></div>
@@ -221,51 +254,130 @@
   document.getElementById('page-title').textContent = manifest.title || 'event';
   document.title = manifest.title || 'event';
 
-  const items = manifest.items;
+  const items = manifest.items || [];
   if (!items.length) {
-    document.getElementById('body').innerHTML =
+    document.getElementById('list-wrap').innerHTML =
       '<div class="empty">manifest has no geolocated items</div>';
     return;
   }
   items.forEach((it, i) => { it._i = i; it._t = new Date(it.ts).getTime(); });
 
-  const activeDevices = new Set(manifest.devices.map(d => d.key));
+  const sorted = [...items].sort((a, b) => a._t - b._t);
+  const tRange = { min: sorted[0]._t, max: sorted.at(-1)._t };
+  if (tRange.max === tRange.min) tRange.max = tRange.min + 60_000;
+  const totalSpan = tRange.max - tRange.min;
+
   const deviceColor = Object.fromEntries(manifest.devices.map(d => [d.key, d.color]));
   const iconFor = { photo: '📷', video: '▶', audio: '♪' };
 
-  // ---- Map ---------------------------------------------------------------
-  const map = L.map('map', { zoomControl: true, worldCopyJump: true });
+  // --- state ---
+  const state = {
+    activeDevices: new Set(manifest.devices.map(d => d.key)),
+    brush: null,          // {a, b} in ms, null = full range
+    expandedId: null,     // id of the row expanded inline
+    currentList: [],      // last-rendered list (scope for prev/next & selection band)
+    initialFit: true,
+  };
+
+  // ------------------------------------------------------------------ Map
+  // SmoothWheelZoom plugin (inline, MIT — mutsuyuki/Leaflet.SmoothWheelZoom).
+  // Replaces the default per-notch wheel handler with a rAF-driven continuous
+  // zoom that updates via CSS transform while the wheel is scrolling, then
+  // reloads tiles at the end. Truly smooth zoom on raster tile layers.
+  L.Map.mergeOptions({ smoothWheelZoom: true, smoothSensitivity: 1 });
+  L.Map.SmoothWheelZoom = L.Handler.extend({
+    addHooks() { L.DomEvent.on(this._map._container, 'wheel', this._onWheel, this); },
+    removeHooks() { L.DomEvent.off(this._map._container, 'wheel', this._onWheel, this); },
+    _onWheel(e) { if (!this._wheeling) this._start(e); this._wheeling && this._during(e); },
+    _start(e) {
+      const map = this._map;
+      this._wheeling = true;
+      this._wheelMousePos = map.mouseEventToContainerPoint(e);
+      this._centerPoint = map.getSize()._divideBy(2);
+      this._startLatLng = map.containerPointToLatLng(this._centerPoint);
+      this._wheelStartLatLng = map.containerPointToLatLng(this._wheelMousePos);
+      this._moved = false;
+      map._stop();
+      this._goalZoom = map.getZoom();
+      this._prevCenter = map.getCenter();
+      this._prevZoom = map.getZoom();
+      this._raf = requestAnimationFrame(this._tick.bind(this));
+    },
+    _during(e) {
+      const map = this._map;
+      this._goalZoom = this._goalZoom
+        + L.DomEvent.getWheelDelta(e) * 0.003 * map.options.smoothSensitivity;
+      this._goalZoom = map._limitZoom(this._goalZoom);
+      this._wheelMousePos = map.mouseEventToContainerPoint(e);
+      clearTimeout(this._endTimer);
+      this._endTimer = setTimeout(this._end.bind(this), 200);
+      L.DomEvent.preventDefault(e); L.DomEvent.stopPropagation(e);
+    },
+    _end() {
+      this._wheeling = false;
+      cancelAnimationFrame(this._raf);
+      this._map._moveEnd(true);
+    },
+    _tick() {
+      const map = this._map;
+      if (!map.getCenter().equals(this._prevCenter) || map.getZoom() !== this._prevZoom) return;
+      const z = Math.floor((map.getZoom() + (this._goalZoom - map.getZoom()) * 0.3) * 100) / 100;
+      const delta = this._wheelMousePos.subtract(this._centerPoint);
+      if (delta.x === 0 && delta.y === 0) return;
+      const center = map.unproject(
+        map.project(this._wheelStartLatLng, z).subtract(delta), z);
+      if (!this._moved) { map._moveStart(true, false); this._moved = true; }
+      map._move(center, z);
+      map._pixelOrigin = map._getNewPixelOrigin(center, z);
+      map.getPanes().mapPane.style.transform = '';
+      this._prevCenter = map.getCenter();
+      this._prevZoom = map.getZoom();
+      this._raf = requestAnimationFrame(this._tick.bind(this));
+    },
+  });
+  L.Map.addInitHook('addHandler', 'smoothWheelZoom', L.Map.SmoothWheelZoom);
+
+  // keyboard:false frees the arrow keys for list navigation.
+  const map = L.map('map', {
+    zoomControl: true,
+    worldCopyJump: true,
+    keyboard: false,
+    scrollWheelZoom: false,   // handled by SmoothWheelZoom instead
+    smoothWheelZoom: true,
+    smoothSensitivity: 1.2,
+    zoomSnap: 0,
+    zoomDelta: 0.5,
+  });
   const bounds = L.latLngBounds(items.map(it => [it.lat, it.lon]));
   map.fitBounds(bounds.pad(0.15));
 
   const baseLayers = {
-    'Positron (light-on-dark clean)': L.tileLayer(
+    'Positron (dark)': L.tileLayer(
       'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
       { subdomains: 'abcd', maxZoom: 20,
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>' }),
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/attributions">CARTO</a>' }),
     'OpenStreetMap': L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
       { maxZoom: 19,
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' }),
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>' }),
     'Satellite (Esri)': L.tileLayer(
       'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-      { maxZoom: 19,
-        attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community' }),
+      { maxZoom: 19, attribution: 'Tiles &copy; Esri' }),
   };
-  baseLayers['Positron (light-on-dark clean)'].addTo(map);
+  baseLayers['Positron (dark)'].addTo(map);
   L.control.layers(baseLayers, {}, { position: 'topleft', collapsed: true }).addTo(map);
 
-  // Chronological path polyline
-  const sorted = [...items].sort((a, b) => a._t - b._t);
   const path = L.polyline(sorted.map(it => [it.lat, it.lon]),
     { color: '#ffffff', opacity: 0.35, weight: 2, dashArray: '4,6' }).addTo(map);
 
-  // Marker cluster
   const cluster = L.markerClusterGroup({
     maxClusterRadius: 60,
     spiderfyOnMaxZoom: true,
     showCoverageOnHover: false,
+    // Disable the post-zoom marker spring animation — with smooth-wheel-zoom
+    // it plays out AFTER the map settles and reads as a second move.
+    animate: false,
+    animateAddingMarkers: false,
     iconCreateFunction: c => {
-      // build pie of device colors
       const kids = c.getAllChildMarkers();
       const counts = {};
       kids.forEach(m => {
@@ -273,7 +385,6 @@
         counts[d] = (counts[d] || 0) + 1;
       });
       const n = kids.length;
-      // gradient background: series of conic segments
       const stops = [];
       let acc = 0;
       Object.entries(counts).forEach(([d, k]) => {
@@ -282,7 +393,7 @@
         stops.push(`${col} ${acc}% ${acc + pct}%`);
         acc += pct;
       });
-      const size = Math.min(56, 28 + Math.log2(n) * 6);
+      const size = Math.min(58, 30 + Math.log2(n) * 6);
       const style = `background: conic-gradient(${stops.join(',')}); width:${size}px;height:${size}px;`;
       return L.divIcon({
         html: `<div class="cluster-ico" style="${style}"><span style="background:rgba(0,0,0,.55);padding:2px 6px;border-radius:10px">${n}</span></div>`,
@@ -299,243 +410,401 @@
       className: '', iconSize: [size, size],
     });
   }
-
   items.forEach(it => {
     const m = L.marker([it.lat, it.lon], { icon: markerIcon(it), _item: it });
-    m.on('click', () => select(it));
+    m.on('click', () => toggleExpand(it.id, /*flyTo*/ false));
     markers.set(it.id, m);
-    cluster.addLayer(m);
   });
 
-  cluster.on('clusterclick', e => {
-    const kids = e.layer.getAllChildMarkers().map(m => m.options._item);
-    kids.sort((a, b) => a._t - b._t);
-    renderList(kids, 'cluster of ' + kids.length);
-  });
+  // ------------------------------------------------------------ Filtering
+  function passesFilter(it) {
+    if (!state.activeDevices.has(it.device)) return false;
+    if (state.brush) {
+      const a = Math.min(state.brush.a, state.brush.b);
+      const b = Math.max(state.brush.a, state.brush.b);
+      if (it._t < a || it._t > b) return false;
+    }
+    return true;
+  }
+  function itemsPassingFilter() { return items.filter(passesFilter); }
+  function itemsInView() {
+    const b = map.getBounds();
+    return itemsPassingFilter()
+      .filter(it => b.contains([it.lat, it.lon]))
+      .sort((a, b) => a._t - b._t);
+  }
 
-  // ---- Sidebar / list / detail ------------------------------------------
-  const body = document.getElementById('body');
+  function refreshMap() {
+    const pass = itemsPassingFilter();
+    const passSet = new Set(pass.map(i => i.id));
+    cluster.clearLayers();
+    markers.forEach((m, id) => { if (passSet.has(id)) cluster.addLayer(m); });
+    path.setLatLngs(sorted.filter(i => passSet.has(i.id)).map(i => [i.lat, i.lon]));
+    document.querySelectorAll('#timeline .dot').forEach(d =>
+      d.classList.toggle('hidden', !passSet.has(d.dataset.id)));
+  }
+
+  let listRefreshTimer;
+  function refreshList() {
+    state.currentList = itemsInView();
+    // Never drop the currently-expanded item just because the viewport
+    // shifted off it — otherwise moveend collapses the user's selection.
+    if (state.expandedId && !state.currentList.find(x => x.id === state.expandedId)) {
+      const it = items.find(i => i.id === state.expandedId);
+      if (it) state.currentList = [...state.currentList, it].sort((a, b) => a._t - b._t);
+    }
+    renderList();
+    updateSelectionBand();
+  }
+  function scheduleListRefresh() {
+    clearTimeout(listRefreshTimer);
+    listRefreshTimer = setTimeout(refreshList, 100);
+  }
+  map.on('moveend', scheduleListRefresh);
+
+  // ------------------------------------------------------------ List UI
+  const listWrap = document.getElementById('list-wrap');
   const countBadge = document.getElementById('count-badge');
-  let selectedId = null;
 
   function fmtTime(iso) {
-    const d = new Date(iso);
-    return d.toLocaleString([], {
-      month: 'short', day: 'numeric',
-      hour: 'numeric', minute: '2-digit',
+    return new Date(iso).toLocaleString([], {
+      month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
     });
   }
   function fmtDur(s) {
     if (s == null) return '';
     const m = Math.floor(s / 60), r = Math.round(s % 60);
-    return m ? `${m}m${r.toString().padStart(2,'0')}s` : `${s.toFixed(1)}s`;
+    return m ? `${m}m${String(r).padStart(2,'0')}s` : `${s.toFixed(1)}s`;
   }
 
-  function renderList(list, header) {
-    selectedId = null;
-    updateMarkerActiveState();
-    const rows = list.map(it => `
-      <div class="item-row" data-id="${it.id}">
-        <div class="thumb" style="background-image:url('${it.thumb}')">
-          <span class="kind">${iconFor[it.kind]}</span>
-        </div>
-        <div class="meta">
-          <div class="top">
-            <span class="dev-dot" style="background:${it.color}"></span>
-            <span class="name" title="${it.orig_name}">${it.orig_name}</span>
+  function rowHtml(it) {
+    const expanded = state.expandedId === it.id;
+    let expandedBody = '';
+    if (expanded) {
+      let media;
+      if (it.kind === 'photo') {
+        media = `<img src="${it.src}" alt="${it.orig_name}" loading="lazy">`;
+      } else if (it.kind === 'video') {
+        media = `<video src="${it.src}" controls autoplay playsinline poster="${it.thumb}"></video>`;
+      } else {
+        media = `<div style="padding:20px;text-align:center;width:100%">
+          <img src="${it.thumb}" style="max-width:180px;opacity:.6"><br>
+          <audio src="${it.src}" controls autoplay></audio></div>`;
+      }
+      expandedBody = `
+        <div class="expanded-body">
+          <div class="media-wrap">${media}</div>
+          <div class="kv">
+            <div><b>when</b>${new Date(it.ts).toLocaleString()}</div>
+            <div><b>device</b>${it.device || 'unknown'}</div>
+            <div><b>coords</b>${it.lat.toFixed(6)}, ${it.lon.toFixed(6)}
+              &nbsp;<a href="https://www.google.com/maps?q=${it.lat},${it.lon}" target="_blank" rel="noopener">google maps ↗</a></div>
+            ${it.duration ? `<div><b>duration</b>${fmtDur(it.duration)}</div>` : ''}
+            ${it.width ? `<div><b>size</b>${it.width}×${it.height}</div>` : ''}
           </div>
-          <div class="sub">${fmtTime(it.ts)} · ${it.device}${it.duration ? ' · ' + fmtDur(it.duration) : ''}</div>
-        </div>
-      </div>`).join('');
-    body.innerHTML = `<div class="item-list">${rows || '<div class="empty">no items</div>'}</div>`;
-    countBadge.textContent = header || `${list.length} items`;
-    body.querySelectorAll('.item-row').forEach(r =>
-      r.onclick = () => select(items.find(i => i.id === r.dataset.id)));
-  }
-
-  function renderDetail(it) {
-    selectedId = it.id;
-    updateMarkerActiveState();
-    const idx = sorted.findIndex(x => x.id === it.id);
-    const prev = sorted[(idx - 1 + sorted.length) % sorted.length];
-    const next = sorted[(idx + 1) % sorted.length];
-    let media = '';
-    if (it.kind === 'photo') {
-      media = `<img src="${it.src}" alt="${it.orig_name}">`;
-    } else if (it.kind === 'video') {
-      media = `<video src="${it.src}" controls autoplay playsinline poster="${it.thumb}"></video>`;
-    } else {
-      media = `<div style="padding:30px;text-align:center;width:100%">
-        <img src="${it.thumb}" style="max-width:100%;opacity:.6"><br>
-        <audio src="${it.src}" controls autoplay></audio></div>`;
+          <div class="nav">
+            <button class="btn" data-nav="prev" title="prev (← arrow)">← prev</button>
+            <button class="btn" data-nav="next" title="next (→ arrow)">next →</button>
+          </div>
+        </div>`;
     }
-    body.innerHTML = `
-      <div class="detail">
-        <div class="nav">
-          <button class="btn" id="prev-btn">← prev</button>
-          <button class="btn" id="back-btn">list</button>
-          <button class="btn" id="next-btn">next →</button>
+    return `
+      <div class="item-row ${expanded ? 'expanded' : ''}" data-id="${it.id}">
+        <div class="row-head">
+          <div class="thumb" style="background-image:url('${it.thumb}')">
+            <span class="kind">${iconFor[it.kind]}</span>
+          </div>
+          <div class="meta">
+            <div class="top">
+              <span class="dev-dot" style="background:${it.color}"></span>
+              <span class="name" title="${it.orig_name}">${it.orig_name}</span>
+            </div>
+            <div class="sub">${fmtTime(it.ts)} · ${it.device}${it.duration ? ' · ' + fmtDur(it.duration) : ''}</div>
+          </div>
         </div>
-        <div class="title">
-          <span class="dev-dot" style="background:${it.color}"></span>
-          <span>${it.orig_name}</span>
-        </div>
-        <div class="media-wrap">${media}</div>
-        <div class="kv">
-          <div><b>when</b> ${new Date(it.ts).toLocaleString()}</div>
-          <div><b>device</b> ${it.device || 'unknown'}</div>
-          <div><b>coords</b> ${it.lat.toFixed(6)}, ${it.lon.toFixed(6)}
-            &nbsp;<a href="https://www.google.com/maps?q=${it.lat},${it.lon}" target="_blank" style="color:var(--accent)">↗</a></div>
-          ${it.duration ? `<div><b>duration</b> ${fmtDur(it.duration)}</div>` : ''}
-          ${it.width ? `<div><b>size</b> ${it.width}×${it.height}</div>` : ''}
-        </div>
+        ${expandedBody}
       </div>`;
-    document.getElementById('prev-btn').onclick = () => select(prev);
-    document.getElementById('next-btn').onclick = () => select(next);
-    document.getElementById('back-btn').onclick = () => renderList(visibleItems(), null);
-    countBadge.textContent = `${idx + 1} / ${sorted.length}`;
   }
 
-  function updateMarkerActiveState() {
+  function fullscreenEl() {
+    return document.fullscreenElement || document.webkitFullscreenElement;
+  }
+
+  function renderList() {
+    // If a video inside the list is currently fullscreen, DON'T rebuild
+    // innerHTML — that would detach the video and force the browser to
+    // exit fullscreen. Defer; fullscreenchange re-runs us on exit.
+    if (fullscreenEl() && listWrap.contains(fullscreenEl())) return;
+    const list = state.currentList;
+    countBadge.textContent =
+      list.length === items.length
+        ? `${items.length}`
+        : `${list.length} / ${items.length}`;
+    if (!list.length) {
+      listWrap.innerHTML = '<div class="empty">nothing in view — pan/zoom out or clear filters</div>';
+      return;
+    }
+    // Preserve the currently-expanded row's DOM across re-renders so its
+    // <video>/<img>/<audio> element is NEVER destroyed. Prevents autoplay
+    // restart (double-play bug) and the flash of intermediate img content
+    // when moveend fires from the flyTo we just kicked off in toggleExpand.
+    const keep = state.expandedId
+      ? listWrap.querySelector(`.item-row.expanded[data-id="${state.expandedId}"]`)
+      : null;
+    listWrap.innerHTML = `<div class="item-list">${list.map(rowHtml).join('')}</div>`;
+    if (keep) {
+      const slot = listWrap.querySelector(`.item-row[data-id="${state.expandedId}"]`);
+      if (slot) slot.replaceWith(keep);
+    }
+    listWrap.querySelectorAll('.item-row').forEach(r => {
+      // Skip the preserved row — its handlers are still wired from before.
+      if (r === keep) return;
+      const id = r.dataset.id;
+      r.querySelector('.row-head').addEventListener('click',
+        () => toggleExpand(id, /*flyTo*/ true));
+      r.querySelectorAll('[data-nav]').forEach(btn => {
+        btn.addEventListener('click', e => {
+          e.stopPropagation();
+          step(btn.dataset.nav === 'prev' ? -1 : +1);
+        });
+      });
+    });
+    // Wire play → scroll-into-view on media elements. Only on freshly-built
+    // rows; preserved rows already carry the listener from their first build.
+    const expandedEl = listWrap.querySelector('.item-row.expanded');
+    if (expandedEl && expandedEl !== keep) {
+      expandedEl.querySelectorAll('video, audio').forEach(m =>
+        m.addEventListener('play', scrollExpandedIntoView));
+    }
+    updateMarkerActive();
+    scrollExpandedIntoView();
+  }
+
+  // Wrap-around walk through the current list. -1 or +1.
+  // Unlike toggleExpand(), this always expands the target (never collapses).
+  function step(dir) {
+    const list = state.currentList;
+    if (!list.length) return;
+    let idx = list.findIndex(x => x.id === state.expandedId);
+    if (idx < 0) idx = dir > 0 ? -1 : list.length;
+    const nextId = list[(idx + dir + list.length) % list.length].id;
+    if (state.expandedId !== nextId) toggleExpand(nextId, true);
+    else scrollExpandedIntoView();
+  }
+
+  function scrollExpandedIntoView() {
+    if (!state.expandedId) return;
+    const el = listWrap.querySelector('.item-row.expanded');
+    if (el && typeof el.scrollIntoView === 'function') {
+      el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+  }
+
+  function toggleExpand(id, flyTo) {
+    if (state.expandedId === id) {
+      state.expandedId = null;
+    } else {
+      state.expandedId = id;
+      const it = items.find(i => i.id === id);
+      if (it && flyTo) {
+        map.flyTo([it.lat, it.lon],
+          Math.max(map.getZoom(), 16), { duration: 0.5 });
+      }
+    }
+    // If the freshly-selected item isn't in the current list (e.g. clicked
+    // a marker outside the current viewport), pull it in.
+    if (state.expandedId && !state.currentList.find(x => x.id === state.expandedId)) {
+      const it = items.find(i => i.id === state.expandedId);
+      if (it) state.currentList = [...state.currentList, it].sort((a, b) => a._t - b._t);
+    }
+    renderList();
+    updateSelectionBand();
+  }
+
+  function updateMarkerActive() {
     markers.forEach((m, id) => {
       const it = items.find(i => i.id === id);
-      m.setIcon(markerIcon(it, id === selectedId));
+      m.setIcon(markerIcon(it, id === state.expandedId));
     });
     document.querySelectorAll('#timeline .dot').forEach(d =>
-      d.classList.toggle('active', d.dataset.id === selectedId));
+      d.classList.toggle('active', d.dataset.id === state.expandedId));
   }
 
-  function select(it) {
-    if (!it) return;
-    renderDetail(it);
-    map.flyTo([it.lat, it.lon], Math.max(map.getZoom(), 16), { duration: 0.6 });
-  }
+  document.getElementById('reset-btn').addEventListener('click', () => {
+    state.expandedId = null;
+    state.brush = null;
+    state.activeDevices = new Set(manifest.devices.map(d => d.key));
+    renderDevices();
+    refreshMap();
+    drawBrush();
+    map.flyToBounds(bounds.pad(0.15), { duration: 0.5 });
+  });
 
-  document.getElementById('reset-btn').onclick = () => {
-    selectedId = null;
-    map.flyToBounds(bounds.pad(0.15));
-    renderList(visibleItems(), null);
-  };
-
-  // ---- Devices panel -----------------------------------------------------
+  // ------------------------------------------------------------ Devices
   function renderDevices() {
     const counts = {};
     items.forEach(it => counts[it.device] = (counts[it.device] || 0) + 1);
     const dev = document.getElementById('devices');
     dev.innerHTML = `<h2>devices</h2>` + manifest.devices.map(d => `
-      <div class="device-row ${activeDevices.has(d.key) ? '' : 'off'}" data-key="${d.key}">
+      <div class="device-row ${state.activeDevices.has(d.key) ? '' : 'off'}"
+           data-key="${d.key}">
         <div class="swatch" style="background:${d.color}"></div>
         <div class="name">${d.key || 'unknown'}</div>
         <div class="n">${counts[d.key] || 0}</div>
       </div>`).join('');
     dev.querySelectorAll('.device-row').forEach(r => r.onclick = () => {
       const k = r.dataset.key;
-      if (activeDevices.has(k)) activeDevices.delete(k); else activeDevices.add(k);
-      applyFilter();
+      if (state.activeDevices.has(k)) state.activeDevices.delete(k);
+      else state.activeDevices.add(k);
       renderDevices();
+      refreshMap();
+      // fit map to remaining, then moveend updates the list
+      const pass = itemsPassingFilter();
+      if (pass.length) map.flyToBounds(L.latLngBounds(pass.map(i => [i.lat, i.lon])).pad(0.15), { duration: 0.4 });
+      else refreshList();
     });
   }
 
-  // ---- Timeline (brushable) ---------------------------------------------
+  // ------------------------------------------------------------ Timeline
   const track = document.getElementById('track');
   const axis = document.getElementById('axis');
-  const tRange = { min: Math.min(...items.map(i => i._t)),
-                   max: Math.max(...items.map(i => i._t)) };
-  let brush = { a: tRange.min, b: tRange.max };
 
   function buildTimeline() {
     track.innerHTML = '';
     const w = track.clientWidth;
-    const span = tRange.max - tRange.min || 1;
     items.forEach(it => {
       const dot = document.createElement('div');
       dot.className = 'dot';
       dot.dataset.id = it.id;
-      dot.style.left = (((it._t - tRange.min) / span) * w) + 'px';
+      dot.style.left = (((it._t - tRange.min) / totalSpan) * w) + 'px';
       dot.style.background = it.color;
       dot.title = `${fmtTime(it.ts)} · ${it.orig_name}`;
-      dot.onclick = () => select(it);
+      dot.addEventListener('click', e => {
+        e.stopPropagation();
+        toggleExpand(it.id, true);
+      });
       track.appendChild(dot);
     });
-    // axis ticks
     axis.innerHTML = '';
     const ticks = 5;
     for (let i = 0; i <= ticks; i++) {
-      const t = tRange.min + (span * i / ticks);
+      const t = tRange.min + (totalSpan * i / ticks);
       const el = document.createElement('div');
       el.className = 'tick';
-      el.style.left = ((i / ticks) * w) + 'px';
+      el.style.left = (8 + (i / ticks) * w) + 'px';
       el.textContent = fmtTime(new Date(t).toISOString());
       axis.appendChild(el);
     }
-    drawBrush();
   }
 
   function drawBrush() {
-    const w = track.clientWidth;
-    const span = tRange.max - tRange.min || 1;
     let el = document.querySelector('#timeline .brush');
-    if (!el) { el = document.createElement('div'); el.className = 'brush'; document.getElementById('timeline').appendChild(el); }
-    const x1 = ((brush.a - tRange.min) / span) * w;
-    const x2 = ((brush.b - tRange.min) / span) * w;
-    el.style.left = Math.min(x1, x2) + 'px';
-    el.style.width = Math.abs(x2 - x1) + 'px';
+    if (!state.brush) { if (el) el.remove(); return; }
+    if (!el) {
+      el = document.createElement('div');
+      el.className = 'brush';
+      document.getElementById('timeline').appendChild(el);
+    }
+    const w = track.clientWidth;
+    const x1 = 8 + ((Math.min(state.brush.a, state.brush.b) - tRange.min) / totalSpan) * w;
+    const x2 = 8 + ((Math.max(state.brush.a, state.brush.b) - tRange.min) / totalSpan) * w;
+    el.style.left = x1 + 'px';
+    el.style.width = Math.max(2, x2 - x1) + 'px';
   }
 
-  function visibleItems() {
-    return items.filter(it =>
-      activeDevices.has(it.device) &&
-      it._t >= Math.min(brush.a, brush.b) &&
-      it._t <= Math.max(brush.a, brush.b));
+  function updateSelectionBand() {
+    let band = document.querySelector('#timeline .selection-band');
+    const list = state.currentList;
+    if (!list.length) { if (band) band.remove(); return; }
+    if (!band) {
+      band = document.createElement('div');
+      band.className = 'selection-band';
+      document.getElementById('timeline').appendChild(band);
+    }
+    const w = track.clientWidth;
+    const times = list.map(i => i._t);
+    let minT = Math.min(...times);
+    let maxT = Math.max(...times);
+    const fine = Math.max(30_000, totalSpan * 0.005);
+    if (maxT - minT < fine) { minT -= fine / 2; maxT += fine / 2; }
+    const x1 = 8 + Math.max(0, ((minT - tRange.min) / totalSpan) * w);
+    const x2 = 8 + Math.min(w, ((maxT - tRange.min) / totalSpan) * w);
+    band.style.left = x1 + 'px';
+    band.style.width = Math.max(3, x2 - x1) + 'px';
   }
 
-  function applyFilter() {
-    const vis = new Set(visibleItems().map(i => i.id));
-    cluster.clearLayers();
-    markers.forEach((m, id) => { if (vis.has(id)) cluster.addLayer(m); });
-    path.setLatLngs(sorted.filter(i => vis.has(i.id)).map(i => [i.lat, i.lon]));
-    document.querySelectorAll('#timeline .dot').forEach(d =>
-      d.classList.toggle('hidden', !vis.has(d.dataset.id)));
-    if (!selectedId) renderList(visibleItems(), null);
-  }
-
-  // Brush dragging
+  // Brush via pointer events (works for mouse + touch)
   const shim = document.getElementById('hover-shim');
   let dragging = null;
-  shim.addEventListener('mousedown', e => {
-    const w = track.clientWidth;
-    const span = tRange.max - tRange.min || 1;
-    const t = tRange.min + (e.offsetX / w) * span;
-    dragging = { start: t };
-    brush = { a: t, b: t };
+
+  function pointToTime(clientX) {
+    const rect = track.getBoundingClientRect();
+    const x = Math.max(0, Math.min(rect.width, clientX - rect.left));
+    return tRange.min + (x / rect.width) * totalSpan;
+  }
+
+  shim.addEventListener('pointerdown', e => {
+    // ignore taps on dots
+    if (e.target.classList && e.target.classList.contains('dot')) return;
+    shim.setPointerCapture(e.pointerId);
+    const t = pointToTime(e.clientX);
+    dragging = { pid: e.pointerId, start: t };
+    state.brush = { a: t, b: t };
     drawBrush();
   });
-  window.addEventListener('mousemove', e => {
-    if (!dragging) return;
-    const rect = shim.getBoundingClientRect();
-    const w = track.clientWidth;
-    const span = tRange.max - tRange.min || 1;
-    let x = e.clientX - rect.left;
-    x = Math.max(0, Math.min(w, x));
-    const t = tRange.min + (x / w) * span;
-    brush.b = t;
+  shim.addEventListener('pointermove', e => {
+    if (!dragging || dragging.pid !== e.pointerId) return;
+    state.brush.b = pointToTime(e.clientX);
     drawBrush();
   });
-  window.addEventListener('mouseup', () => {
-    if (!dragging) return;
-    if (Math.abs(brush.a - brush.b) < (tRange.max - tRange.min) * 0.01) {
-      brush = { a: tRange.min, b: tRange.max };
-      drawBrush();
+  function endDrag(e) {
+    if (!dragging || (e && e.pointerId !== dragging.pid)) return;
+    try { shim.releasePointerCapture(dragging.pid); } catch(_) {}
+    // Collapse to null if too small (treat as a "clear")
+    if (state.brush &&
+        Math.abs(state.brush.a - state.brush.b) < totalSpan * 0.01) {
+      state.brush = null;
     }
     dragging = null;
-    applyFilter();
-  });
+    drawBrush();
+    refreshMap();
+    // Fit map to filtered set (if a sub-range) — moveend refreshes list
+    const pass = itemsPassingFilter();
+    if (state.brush && pass.length) {
+      map.flyToBounds(L.latLngBounds(pass.map(i => [i.lat, i.lon])).pad(0.2),
+        { duration: 0.5 });
+    } else {
+      refreshList();
+    }
+  }
+  shim.addEventListener('pointerup', endDrag);
+  shim.addEventListener('pointercancel', endDrag);
 
-  // ---- Init --------------------------------------------------------------
+  // ------------------------------------------------------------ Init
   renderDevices();
   buildTimeline();
-  applyFilter();
-  window.addEventListener('resize', () => { buildTimeline(); });
+  refreshMap();
+  // Leaflet fitBounds fires moveend asynchronously; give it a beat then refresh
+  setTimeout(refreshList, 50);
+
+  // On fullscreen exit, re-run any refresh we skipped while the video held the DOM.
+  ['fullscreenchange', 'webkitfullscreenchange'].forEach(ev =>
+    document.addEventListener(ev, () => { if (!fullscreenEl()) refreshList(); }));
+
+  // Arrow keys page through the current list (wraps).
+  window.addEventListener('keydown', e => {
+    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+    const t = e.target;
+    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+    e.preventDefault();
+    step(e.key === 'ArrowLeft' ? -1 : +1);
+  });
+
+  window.addEventListener('resize', () => {
+    buildTimeline();
+    drawBrush();
+    updateSelectionBand();
+  });
 })();
 </script>
 </body>
