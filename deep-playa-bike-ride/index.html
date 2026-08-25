@@ -286,6 +286,149 @@
     .dev-actions { opacity: 1; }
     .dev-btn { min-height: 28px; padding: 4px 8px; }
   }
+
+  /* --- Theater / playback mode --- */
+  #theater {
+    position: fixed; inset: 0; z-index: 2000;
+    background: #000; display: none; flex-direction: column;
+  }
+  #theater.active { display: flex; }
+  #theater .stage {
+    flex: 1; min-height: 0; position: relative;
+    display: flex; align-items: center; justify-content: center;
+    background: #000; overflow: hidden;
+  }
+  #theater .stage-media {
+    max-width: 100%; max-height: 100%;
+    width: auto; height: auto; display: block;
+  }
+  #theater .audio-holder {
+    color: #fff; text-align: center; padding: 24px;
+    display: flex; flex-direction: column; align-items: center; gap: 14px;
+  }
+  #theater .audio-holder img { max-width: 260px; opacity: .55; display: block; }
+  #theater .audio-holder audio { width: min(80vw, 480px); }
+
+  #theater .info-top {
+    position: absolute; top: 10px; left: 14px; right: 14px;
+    display: flex; align-items: center; gap: 10px;
+    color: #fff; font-size: 13px;
+    text-shadow: 0 1px 3px rgba(0,0,0,.85);
+    pointer-events: none; z-index: 5;
+  }
+  #theater .info-top .dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+  #theater .info-top .name {
+    font-weight: 600; white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis; max-width: 50%;
+  }
+  #theater .info-top .sep { color: rgba(255,255,255,.5); }
+  #theater .info-top .cluster-lbl {
+    color: rgba(255,255,255,.85); font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  #theater .info-top .spacer { flex: 1; }
+  #theater .close-btn {
+    background: rgba(0,0,0,.55); color: #fff;
+    border: 1px solid rgba(255,255,255,.22); border-radius: 4px;
+    padding: 5px 10px; cursor: pointer; font: inherit; font-size: 12px;
+    pointer-events: auto;
+  }
+  #theater .close-btn:hover { background: rgba(0,0,0,.85); }
+
+  #theater .mini-map {
+    position: absolute; bottom: 12px; left: 12px;
+    width: 220px; height: 140px;
+    border-radius: 6px; overflow: hidden;
+    border: 1px solid rgba(255,255,255,.18);
+    box-shadow: 0 4px 16px rgba(0,0,0,.55);
+    background: #1a1d24; z-index: 5;
+  }
+
+  #theater .bar {
+    background: rgba(0,0,0,.92);
+    border-top: 1px solid rgba(255,255,255,.08);
+    padding: 6px 10px 8px; display: flex; flex-direction: column;
+    gap: 5px; color: #fff; flex-shrink: 0;
+  }
+  #theater .bar-row {
+    display: flex; align-items: center; gap: 6px;
+    min-height: 30px;
+  }
+  #theater .ctrl {
+    background: rgba(255,255,255,.06); color: #fff;
+    border: 1px solid rgba(255,255,255,.14); border-radius: 4px;
+    padding: 4px 10px; cursor: pointer; font: inherit; font-size: 12px;
+    line-height: 1; min-height: 28px; min-width: 34px;
+  }
+  #theater .ctrl:hover { background: rgba(255,255,255,.13); border-color: rgba(255,255,255,.28); }
+  #theater .ctrl.active { background: rgba(75,123,236,.35); border-color: var(--accent); }
+  #theater .ctrl.big { padding: 4px 14px; font-size: 14px; font-weight: 600; }
+  #theater .divider {
+    width: 1px; align-self: stretch;
+    background: rgba(255,255,255,.14); margin: 3px 3px;
+  }
+  #theater .info-block {
+    flex: 1; min-width: 0; font-size: 12px;
+    color: rgba(255,255,255,.75);
+    display: flex; align-items: center; gap: 10px;
+    overflow: hidden;
+  }
+  #theater .info-block .when { color: #fff; font-weight: 500; white-space: nowrap; }
+  #theater .info-block .where {
+    font-family: ui-monospace, monospace;
+    color: rgba(255,255,255,.7); white-space: nowrap;
+  }
+  #theater .info-block .cam {
+    color: rgba(255,255,255,.7);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    min-width: 0; flex: 1;
+  }
+
+  #theater .t-timeline {
+    position: relative; height: 22px;
+    background: rgba(255,255,255,.03);
+    border-radius: 3px; overflow: hidden;
+    cursor: pointer;
+  }
+  #theater .t-timeline .t-dot {
+    position: absolute; width: 4px; height: 4px; border-radius: 50%;
+    top: 50%; transform: translate(-50%, -50%);
+    opacity: .4; pointer-events: none;
+  }
+  #theater .t-timeline .t-dot.in-cluster { opacity: 1; width: 6px; height: 6px; }
+  #theater .t-timeline .t-dot.active {
+    width: 9px; height: 9px; border: 1.5px solid #fff; z-index: 3;
+  }
+  #theater .t-timeline .t-cluster-band {
+    position: absolute; top: 2px; bottom: 2px;
+    background: rgba(75,123,236,.20);
+    border-left: 2px solid var(--accent);
+    border-right: 2px solid var(--accent);
+    border-radius: 2px; pointer-events: none;
+  }
+  #theater .t-timeline .t-cursor {
+    position: absolute; top: 0; bottom: 0; width: 2px;
+    background: #fff; transform: translateX(-1px);
+    pointer-events: none; z-index: 4;
+    box-shadow: 0 0 4px rgba(255,255,255,.7);
+  }
+
+  #theater .autoplay-toast {
+    position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+    background: rgba(0,0,0,.9); color: #fff;
+    border: 1px solid var(--accent); border-radius: 6px;
+    padding: 8px 14px; font-size: 13px; cursor: pointer;
+    z-index: 7; display: none;
+  }
+  #theater.autoplay-blocked .autoplay-toast { display: block; }
+
+  @media (max-width: 768px) {
+    #theater .mini-map { width: 130px; height: 90px; bottom: 8px; left: 8px; }
+    #theater .info-block { font-size: 11px; gap: 6px; }
+    #theater .info-block .cam { display: none; }
+    #theater .ctrl { padding: 6px 12px; min-height: 34px; font-size: 13px; }
+    #theater .info-top .name { max-width: 40%; }
+  }
 </style>
 </head>
 <body>
@@ -295,6 +438,7 @@
     <div class="sidebar-hdr">
       <h1 id="page-title">event</h1>
       <span class="count" id="count-badge"></span>
+      <button class="btn" id="theater-btn" title="theater / playback mode">▶ theater</button>
       <button class="btn" id="reset-btn" title="reset view, filters & selection">reset</button>
     </div>
     <div class="sidebar-body" id="body">
@@ -306,6 +450,38 @@
     <div class="track" id="track"></div>
     <div class="axis" id="axis"></div>
     <div class="hover-shim" id="hover-shim"></div>
+  </div>
+</div>
+
+<div id="theater">
+  <div class="stage" id="theater-stage">
+    <div class="info-top">
+      <span class="dot" id="t-dot"></span>
+      <span class="name" id="t-name"></span>
+      <span class="sep">·</span>
+      <span class="cluster-lbl" id="t-cluster-lbl"></span>
+      <span class="spacer"></span>
+      <button class="close-btn" id="t-close" title="exit (esc)">✕ exit</button>
+    </div>
+    <div class="mini-map" id="theater-map"></div>
+    <div class="autoplay-toast" id="t-autoplay-toast">🔇 sound blocked · click to enable</div>
+  </div>
+  <div class="bar">
+    <div class="bar-row">
+      <button class="ctrl" id="t-prev" title="prev (← arrow)">←</button>
+      <button class="ctrl big" id="t-play" title="play / pause (space)">▶</button>
+      <button class="ctrl" id="t-next" title="next (→ arrow)">→</button>
+      <div class="divider"></div>
+      <button class="ctrl" id="t-fast" title="fast cycle mode (f)">fast</button>
+      <button class="ctrl" id="t-mute" title="mute / unmute (m)">🔊</button>
+      <div class="divider"></div>
+      <div class="info-block">
+        <span class="when" id="t-when">—</span>
+        <span class="where" id="t-where">—</span>
+        <span class="cam" id="t-cam"></span>
+      </div>
+    </div>
+    <div class="t-timeline" id="t-timeline"></div>
   </div>
 </div>
 
@@ -957,6 +1133,438 @@
   shim.addEventListener('pointerup', endDrag);
   shim.addEventListener('pointercancel', endDrag);
 
+  // ================================================================ Theater
+  //
+  // Playback mode: media takes the stage, tiny map + timeline are the
+  // context strip. Clustering re-uses whatever leaflet.markercluster is
+  // showing on the main map right now — we snapshot each item's currently-
+  // visible parent cluster at theater entry, then group chronological items
+  // by that parent. So the "6 clusters of 11/5/12/3/4/14" you see on the
+  // map are exactly what theater walks through in order.
+  //
+  // Playlist honors current filters (device / brush). Reset first for "all".
+  //
+  // Autoplay: user clicked ▶ theater → tab has user activation, so the first
+  // and typically all subsequent play() calls with sound work fine. If a
+  // browser (Safari occasionally, after a video ends) rejects the promise,
+  // we fall back to muted playback and show a click-to-enable-sound toast.
+  const theater = {
+    active: false, playing: false, fast: false, muted: false,
+    index: 0,
+    playlist: [], clusters: [], clusterOf: new Map(),
+    _prevClusterIdx: -1,
+    tMin: 0, tMax: 0, tSpan: 1,
+    // pacing
+    imageMs: 4000,          // real-time image dwell
+    fastImageMs: 1500,      // fast image dwell
+    fastVideoMs: 3000,      // fast video snippet length
+    videoStartFrac: 0.15,   // fast: skip the first N% of the video
+    // handles
+    mediaEl: null,
+    imgTimer: null, capTimer: null, cursorRAF: null,
+  };
+  let theaterMap = null;
+  const theaterMarkers = new Map();
+
+  function computeTheaterPlaylist() {
+    const pl = itemsPassingFilter().sort((a, b) => a._t - b._t);
+    const clusters = [];
+    const clusterOf = new Map();
+    let curKey = null;
+    for (const it of pl) {
+      const mk = markers.get(it.id);
+      let key;
+      try {
+        // getVisibleParent returns the topmost cluster or the marker itself
+        // at the map's current zoom — no zoom, no cluster, no problem.
+        const p = mk ? cluster.getVisibleParent(mk) : null;
+        key = (p && p._leaflet_id != null) ? ('c' + p._leaflet_id) : ('i' + it.id);
+      } catch (_) {
+        key = 'i' + it.id;
+      }
+      if (key !== curKey) {
+        clusters.push({ items: [], key });
+        curKey = key;
+      }
+      clusters[clusters.length - 1].items.push(it);
+      clusterOf.set(it.id, clusters.length - 1);
+    }
+    return { playlist: pl, clusters, clusterOf };
+  }
+
+  function enterTheater() {
+    const c = computeTheaterPlaylist();
+    if (!c.playlist.length) {
+      alert('nothing to play — clear filters or pan/zoom to include items');
+      return;
+    }
+    theater.playlist = c.playlist;
+    theater.clusters = c.clusters;
+    theater.clusterOf = c.clusterOf;
+    const ts = theater.playlist.map(i => i._t);
+    theater.tMin = Math.min(...ts);
+    theater.tMax = Math.max(...ts);
+    if (theater.tMax === theater.tMin) theater.tMax = theater.tMin + 60_000;
+    theater.tSpan = theater.tMax - theater.tMin;
+    theater.index = 0;
+    theater.active = true;
+    theater.playing = true;
+    theater._prevClusterIdx = -1;
+    document.getElementById('theater').classList.add('active');
+    // don't leak sidebar audio into the theater session
+    listWrap.querySelectorAll('video, audio').forEach(m => { try { m.pause(); } catch(_){} });
+    initTheaterMap();
+    buildTheaterTimeline();
+    showItem(0);
+    updatePlayBtn(); updateFastBtn(); updateMuteBtn();
+  }
+
+  function exitTheater() {
+    theater.active = false;
+    theater.playing = false;
+    stopAdvanceTimers(); stopCursorRAF();
+    if (theater.mediaEl && theater.mediaEl.pause) {
+      try { theater.mediaEl.pause(); } catch(_){}
+    }
+    document.getElementById('theater').classList.remove('active');
+    document.getElementById('theater').classList.remove('autoplay-blocked');
+    const stage = document.getElementById('theater-stage');
+    stage.querySelectorAll('.stage-media, .audio-holder').forEach(n => n.remove());
+    theater.mediaEl = null;
+  }
+
+  function stopAdvanceTimers() {
+    if (theater.imgTimer) { clearTimeout(theater.imgTimer); theater.imgTimer = null; }
+    if (theater.capTimer) { clearTimeout(theater.capTimer); theater.capTimer = null; }
+  }
+  function stopCursorRAF() {
+    if (theater.cursorRAF) { cancelAnimationFrame(theater.cursorRAF); theater.cursorRAF = null; }
+  }
+
+  function initTheaterMap() {
+    if (theaterMap) {
+      setTimeout(() => theaterMap.invalidateSize(), 60);
+      return;
+    }
+    theaterMap = L.map('theater-map', {
+      zoomControl: false, attributionControl: false,
+      scrollWheelZoom: false, dragging: false, keyboard: false,
+      doubleClickZoom: false, boxZoom: false, touchZoom: false, tap: false,
+    });
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+      { subdomains: 'abcd', maxZoom: 19 }).addTo(theaterMap);
+    theaterMap.setView([0, 0], 2);
+    setTimeout(() => theaterMap.invalidateSize(), 60);
+  }
+
+  function renderClusterOnMiniMap(clusterIdx) {
+    if (!theaterMap) return;
+    theaterMarkers.forEach(m => theaterMap.removeLayer(m));
+    theaterMarkers.clear();
+    const c = theater.clusters[clusterIdx];
+    if (!c) return;
+    const pts = [];
+    c.items.forEach(it => {
+      const mk = L.circleMarker([it.lat, it.lon], {
+        radius: 4, color: it.color, fillColor: it.color,
+        fillOpacity: 0.85, weight: 1,
+      }).addTo(theaterMap);
+      theaterMarkers.set(it.id, mk);
+      pts.push([it.lat, it.lon]);
+    });
+    const allSame = pts.every(p => p[0] === pts[0][0] && p[1] === pts[0][1]);
+    if (pts.length === 1 || allSame) {
+      theaterMap.setView(pts[0], 16);
+    } else {
+      theaterMap.fitBounds(L.latLngBounds(pts).pad(0.3));
+    }
+  }
+  function highlightMiniMap(activeId) {
+    theaterMarkers.forEach((mk, id) => {
+      const it = theater.playlist.find(i => i.id === id);
+      if (!it) return;
+      const active = id === activeId;
+      mk.setStyle({
+        color: active ? '#fff' : it.color,
+        fillColor: it.color,
+        weight: active ? 2 : 1,
+      });
+      mk.setRadius(active ? 7 : 4);
+      if (active) mk.bringToFront();
+    });
+  }
+
+  function buildTheaterTimeline() {
+    const el = document.getElementById('t-timeline');
+    el.innerHTML = '';
+    const w = el.clientWidth || 800;
+    theater.playlist.forEach((it, i) => {
+      const d = document.createElement('div');
+      d.className = 't-dot';
+      d.dataset.id = it.id;
+      d.dataset.idx = i;
+      d.style.left = (((it._t - theater.tMin) / theater.tSpan) * w) + 'px';
+      d.style.background = it.color;
+      el.appendChild(d);
+    });
+    const band = document.createElement('div');
+    band.className = 't-cluster-band';
+    el.appendChild(band);
+    const cur = document.createElement('div');
+    cur.className = 't-cursor';
+    el.appendChild(cur);
+    el.onclick = (e) => {
+      const rect = el.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const t = theater.tMin + (x / rect.width) * theater.tSpan;
+      let best = 0, bestD = Infinity;
+      theater.playlist.forEach((it, i) => {
+        const d = Math.abs(it._t - t);
+        if (d < bestD) { bestD = d; best = i; }
+      });
+      showItem(best);
+    };
+  }
+
+  function updateTimelineForCluster(clusterIdx) {
+    const el = document.getElementById('t-timeline');
+    const w = el.clientWidth || 800;
+    const c = theater.clusters[clusterIdx];
+    const band = el.querySelector('.t-cluster-band');
+    if (band && c) {
+      const times = c.items.map(i => i._t);
+      let lo = Math.min(...times), hi = Math.max(...times);
+      const pad = Math.max(30_000, theater.tSpan * 0.003);
+      lo -= pad; hi += pad;
+      const x1 = Math.max(0, ((lo - theater.tMin) / theater.tSpan) * w);
+      const x2 = Math.min(w, ((hi - theater.tMin) / theater.tSpan) * w);
+      band.style.left = x1 + 'px';
+      band.style.width = Math.max(3, x2 - x1) + 'px';
+    }
+    el.querySelectorAll('.t-dot').forEach(d => {
+      d.classList.toggle('in-cluster', c && c.items.some(i => i.id === d.dataset.id));
+    });
+  }
+  function updateTimelineCursor(t) {
+    const el = document.getElementById('t-timeline');
+    const w = el.clientWidth || 800;
+    const cur = el.querySelector('.t-cursor');
+    if (!cur) return;
+    const clamped = Math.max(theater.tMin, Math.min(theater.tMax, t));
+    cur.style.left = (((clamped - theater.tMin) / theater.tSpan) * w) + 'px';
+  }
+  function updateTimelineActive(activeId) {
+    document.querySelectorAll('#t-timeline .t-dot').forEach(d =>
+      d.classList.toggle('active', d.dataset.id === activeId));
+  }
+
+  function fmtWhen(iso) {
+    return new Date(iso).toLocaleString([], {
+      year: 'numeric', month: 'short', day: 'numeric',
+      hour: 'numeric', minute: '2-digit', second: '2-digit',
+    });
+  }
+  function fmtCoords(lat, lon) { return `${lat.toFixed(5)}, ${lon.toFixed(5)}`; }
+
+  function showItem(i) {
+    stopAdvanceTimers(); stopCursorRAF();
+    const n = theater.playlist.length;
+    if (!n) return;
+    i = ((i % n) + n) % n;
+    theater.index = i;
+    const it = theater.playlist[i];
+    const clusterIdx = theater.clusterOf.get(it.id);
+    if (clusterIdx !== theater._prevClusterIdx) {
+      renderClusterOnMiniMap(clusterIdx);
+      updateTimelineForCluster(clusterIdx);
+      theater._prevClusterIdx = clusterIdx;
+    }
+    highlightMiniMap(it.id);
+    updateTimelineActive(it.id);
+    updateTimelineCursor(it._t);
+
+    const stage = document.getElementById('theater-stage');
+    stage.querySelectorAll('.stage-media, .audio-holder').forEach(n => n.remove());
+    let media;
+    if (it.kind === 'photo') {
+      media = document.createElement('img');
+      media.className = 'stage-media';
+      media.src = it.src;
+      media.alt = it.orig_name;
+      stage.appendChild(media);
+    } else if (it.kind === 'video') {
+      media = document.createElement('video');
+      media.className = 'stage-media';
+      media.src = it.src;
+      media.playsInline = true;
+      media.controls = false;
+      media.muted = theater.muted;
+      media.preload = 'auto';
+      media.poster = it.thumb;
+      stage.appendChild(media);
+      media.addEventListener('ended', () => {
+        if (theater.active && theater.playing) showItem(theater.index + 1);
+      });
+      media.addEventListener('loadedmetadata', () => {
+        if (theater.fast && media.duration && isFinite(media.duration)) {
+          try { media.currentTime = media.duration * theater.videoStartFrac; } catch(_){}
+        }
+      });
+    } else {
+      const wrap = document.createElement('div');
+      wrap.className = 'audio-holder';
+      const thumb = document.createElement('img');
+      thumb.src = it.thumb;
+      wrap.appendChild(thumb);
+      media = document.createElement('audio');
+      media.src = it.src;
+      media.controls = true;
+      media.muted = theater.muted;
+      wrap.appendChild(media);
+      stage.appendChild(wrap);
+      media.addEventListener('ended', () => {
+        if (theater.active && theater.playing) showItem(theater.index + 1);
+      });
+    }
+    theater.mediaEl = media;
+
+    // info overlays
+    document.getElementById('t-dot').style.background = it.color;
+    document.getElementById('t-name').textContent = it.orig_name;
+    document.getElementById('t-cluster-lbl').textContent =
+      `cluster ${clusterIdx + 1}/${theater.clusters.length} · item ${i + 1}/${n}`;
+    document.getElementById('t-when').textContent = fmtWhen(it.ts);
+    document.getElementById('t-where').textContent =
+      fmtCoords(it.lat, it.lon) + (it.gps_inferred ? ' ~' : '');
+    document.getElementById('t-cam').textContent = it.device || '';
+
+    if (theater.playing) startPlayback();
+  }
+
+  async function startPlayback() {
+    const it = theater.playlist[theater.index];
+    const m = theater.mediaEl;
+    if (it.kind === 'photo') {
+      const dur = theater.fast ? theater.fastImageMs : theater.imageMs;
+      theater.imgTimer = setTimeout(() => {
+        if (theater.active && theater.playing) showItem(theater.index + 1);
+      }, dur);
+      animateCursorLinear(it._t, dur / 1000);
+      return;
+    }
+    if (!m) return;
+    try {
+      await m.play();
+      hideAutoplayHint();
+    } catch (e) {
+      // Autoplay rejected — fall back to muted, keep the show going.
+      if (!m.muted) {
+        m.muted = true;
+        theater.muted = true;
+        updateMuteBtn();
+        try { await m.play(); } catch(_){}
+        showAutoplayHint();
+      }
+    }
+    if (theater.fast && it.kind === 'video') {
+      theater.capTimer = setTimeout(() => {
+        if (theater.active && theater.playing) showItem(theater.index + 1);
+      }, theater.fastVideoMs);
+    }
+    // drive cursor from media time
+    const start = it._t;
+    const step = () => {
+      if (!theater.active || !theater.playing) return;
+      const t = start + ((m.currentTime || 0) * 1000);
+      updateTimelineCursor(t);
+      theater.cursorRAF = requestAnimationFrame(step);
+    };
+    theater.cursorRAF = requestAnimationFrame(step);
+  }
+
+  function animateCursorLinear(startT, seconds) {
+    const t0 = performance.now();
+    const step = () => {
+      if (!theater.active || !theater.playing) return;
+      const elapsed = (performance.now() - t0) / 1000;
+      updateTimelineCursor(startT + elapsed * 1000);
+      if (elapsed < seconds) theater.cursorRAF = requestAnimationFrame(step);
+    };
+    theater.cursorRAF = requestAnimationFrame(step);
+  }
+
+  function togglePlay() {
+    theater.playing = !theater.playing;
+    updatePlayBtn();
+    if (theater.playing) {
+      startPlayback();
+    } else {
+      stopAdvanceTimers(); stopCursorRAF();
+      if (theater.mediaEl && theater.mediaEl.pause) {
+        try { theater.mediaEl.pause(); } catch(_){}
+      }
+    }
+  }
+  function updatePlayBtn() {
+    const b = document.getElementById('t-play');
+    if (b) b.textContent = theater.playing ? '⏸' : '▶';
+  }
+  function updateFastBtn() {
+    const b = document.getElementById('t-fast');
+    if (b) b.classList.toggle('active', theater.fast);
+  }
+  function updateMuteBtn() {
+    const b = document.getElementById('t-mute');
+    if (b) b.textContent = theater.muted ? '🔇' : '🔊';
+    if (theater.mediaEl && 'muted' in theater.mediaEl) {
+      theater.mediaEl.muted = theater.muted;
+    }
+  }
+  function showAutoplayHint() {
+    document.getElementById('theater').classList.add('autoplay-blocked');
+  }
+  function hideAutoplayHint() {
+    document.getElementById('theater').classList.remove('autoplay-blocked');
+  }
+
+  document.getElementById('theater-btn').addEventListener('click', enterTheater);
+  document.getElementById('t-close').addEventListener('click', exitTheater);
+  document.getElementById('t-prev').addEventListener('click', e => {
+    e.currentTarget.blur();
+    showItem(theater.index - 1);
+  });
+  document.getElementById('t-next').addEventListener('click', e => {
+    e.currentTarget.blur();
+    showItem(theater.index + 1);
+  });
+  document.getElementById('t-play').addEventListener('click', e => {
+    e.currentTarget.blur();
+    togglePlay();
+  });
+  document.getElementById('t-fast').addEventListener('click', e => {
+    e.currentTarget.blur();
+    theater.fast = !theater.fast;
+    updateFastBtn();
+    if (theater.active) showItem(theater.index);   // re-apply pacing
+  });
+  document.getElementById('t-mute').addEventListener('click', e => {
+    e.currentTarget.blur();
+    theater.muted = !theater.muted;
+    updateMuteBtn();
+    // if we're unmuting after an autoplay block, retry with sound
+    if (!theater.muted && theater.mediaEl && theater.mediaEl.play) {
+      theater.mediaEl.muted = false;
+      theater.mediaEl.play().then(hideAutoplayHint).catch(()=>{});
+    }
+  });
+  document.getElementById('t-autoplay-toast').addEventListener('click', () => {
+    theater.muted = false; updateMuteBtn();
+    if (theater.mediaEl && theater.mediaEl.play) {
+      theater.mediaEl.muted = false;
+      theater.mediaEl.play().then(hideAutoplayHint).catch(()=>{});
+    }
+  });
+
   // ------------------------------------------------------------ Init
   renderDevices();
   buildTimeline();
@@ -968,11 +1576,31 @@
   ['fullscreenchange', 'webkitfullscreenchange'].forEach(ev =>
     document.addEventListener(ev, () => { if (!fullscreenEl()) refreshList(); }));
 
-  // Arrow keys page through the current list (wraps).
+  // Arrow keys page through the current list (wraps). While theater is
+  // active, keys drive the player instead — space toggles play/pause, esc
+  // exits, ←/→ step, f toggles fast cycle, m toggles mute.
   window.addEventListener('keydown', e => {
-    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
     const t = e.target;
     if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+    if (theater.active) {
+      if (e.key === 'Escape')       { e.preventDefault(); exitTheater(); return; }
+      if (e.key === ' ')            { e.preventDefault(); togglePlay(); return; }
+      if (e.key === 'ArrowLeft')    { e.preventDefault(); showItem(theater.index - 1); return; }
+      if (e.key === 'ArrowRight')   { e.preventDefault(); showItem(theater.index + 1); return; }
+      if (e.key === 'f' || e.key === 'F') {
+        theater.fast = !theater.fast; updateFastBtn();
+        showItem(theater.index); return;
+      }
+      if (e.key === 'm' || e.key === 'M') {
+        theater.muted = !theater.muted; updateMuteBtn();
+        if (!theater.muted && theater.mediaEl && theater.mediaEl.play) {
+          theater.mediaEl.play().then(hideAutoplayHint).catch(()=>{});
+        }
+        return;
+      }
+      return;
+    }
+    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
     e.preventDefault();
     step(e.key === 'ArrowLeft' ? -1 : +1);
   });
@@ -981,6 +1609,13 @@
     buildTimeline();
     drawBrush();
     updateSelectionBand();
+    if (theater.active) {
+      buildTheaterTimeline();
+      updateTimelineForCluster(theater._prevClusterIdx);
+      updateTimelineActive(theater.playlist[theater.index]?.id);
+      updateTimelineCursor(theater.playlist[theater.index]?._t);
+      if (theaterMap) theaterMap.invalidateSize();
+    }
   });
 })();
 </script>
