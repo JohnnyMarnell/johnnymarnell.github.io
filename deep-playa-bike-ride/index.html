@@ -285,6 +285,10 @@
     #timeline .dot { width: 12px; height: 12px; }
     .dev-actions { opacity: 1; }
     .dev-btn { min-height: 28px; padding: 4px 8px; }
+    #drawer { width: min(88vw, 340px); }
+    #drawer .drawer-tab { width: 40px; }
+    #drawer { transform: translateX(calc(100% - 40px)); }
+    #drawer:not(.collapsed) { transform: translateX(0); }
   }
 
   /* --- Theater / playback mode --- */
@@ -310,7 +314,10 @@
   #theater .audio-holder audio { width: min(80vw, 480px); }
 
   #theater .info-top {
-    position: absolute; top: 10px; left: 14px; right: 14px;
+    position: absolute; top: 10px; left: 14px; right: 48px;
+    /* right: 48px reserves space for the always-visible settings-drawer
+       tab (34px) plus a small gap, so the ✕/cycle/export buttons stay
+       clickable while the drawer is collapsed. */
     display: flex; align-items: center; gap: 10px;
     color: #fff; font-size: 13px;
     text-shadow: 0 1px 3px rgba(0,0,0,.85);
@@ -347,7 +354,8 @@
   #theater .bar {
     background: rgba(0,0,0,.92);
     border-top: 1px solid rgba(255,255,255,.08);
-    padding: 6px 10px 8px; display: flex; flex-direction: column;
+    /* right padding leaves room for the drawer tab (34px). */
+    padding: 6px 44px 8px 10px; display: flex; flex-direction: column;
     gap: 5px; color: #fff; flex-shrink: 0;
   }
   #theater .bar-row {
@@ -422,6 +430,269 @@
   }
   #theater.autoplay-blocked .autoplay-toast { display: block; }
 
+  /* Included-still badge in the top overlay */
+  #theater .inc-badge {
+    display: none; margin-left: 6px; padding: 2px 8px;
+    background: rgba(65,199,120,.85); color: #fff;
+    border-radius: 10px; font-size: 11px; font-weight: 600;
+    letter-spacing: .04em; text-shadow: none; pointer-events: none;
+  }
+  #theater .inc-badge.on { display: inline-block; }
+
+  #theater .marks-count {
+    display: none; margin-left: 6px; padding: 2px 8px;
+    background: rgba(75,123,236,.85); color: #fff;
+    border-radius: 10px; font-size: 11px; font-weight: 600;
+    letter-spacing: .04em; pointer-events: none;
+    text-shadow: none;
+  }
+  #theater .marks-count.on { display: inline-block; }
+
+  /* Clip timeline overlaid at the bottom of the stage */
+  #theater .clip-timeline {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    height: 68px; background: rgba(0,0,0,.55);
+    border-top: 1px solid rgba(255,255,255,.10);
+    padding: 4px 10px 6px;
+    display: flex; flex-direction: column; gap: 3px;
+    z-index: 6; pointer-events: auto;
+    color: rgba(255,255,255,.75); font-size: 11px;
+    font-variant-numeric: tabular-nums;
+    user-select: none;
+  }
+  #theater .clip-timeline .ct-meta {
+    display: flex; align-items: center; gap: 8px;
+    height: 14px;
+  }
+  #theater .clip-timeline .ct-time { color: #fff; }
+  #theater .clip-timeline .ct-dur { color: rgba(255,255,255,.55); }
+  #theater .clip-timeline .ct-hint {
+    color: rgba(255,255,255,.55); font-size: 10px;
+    margin-left: auto;
+  }
+  #theater .clip-timeline .ct-track {
+    position: relative; flex: 1; min-height: 40px;
+    background: rgba(255,255,255,.05); border-radius: 3px;
+    overflow: hidden; cursor: pointer;
+  }
+  #theater .clip-timeline canvas {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    display: block;
+  }
+  #theater .clip-timeline .ct-range {
+    position: absolute; top: 0; bottom: 0;
+    background: rgba(65,199,120,.22);
+    border-left: 2px solid rgba(65,199,120,.9);
+    border-right: 2px solid rgba(65,199,120,.9);
+    pointer-events: none;
+  }
+  #theater .clip-timeline .ct-mark {
+    position: absolute; top: 0; bottom: 0; width: 2px;
+    background: rgba(65,199,120,.95); pointer-events: none;
+  }
+  #theater .clip-timeline .ct-mark.pending {
+    background: transparent;
+    box-sizing: border-box;
+  }
+  #theater .clip-timeline .ct-mark.pending-in {
+    border-left: 2px dashed rgba(240,199,80,.95);
+  }
+  #theater .clip-timeline .ct-mark.pending-out {
+    border-right: 2px dashed rgba(80,199,240,.95);
+  }
+  #theater .clip-timeline .ct-mark.pending-out .lbl {
+    left: auto; right: 3px;
+    background: rgba(0,0,0,.6);
+  }
+  #theater .clip-timeline .ct-mark .lbl {
+    position: absolute; top: 1px; left: 3px;
+    background: rgba(0,0,0,.6); color: #fff;
+    padding: 0 4px; border-radius: 2px;
+    font-size: 10px; line-height: 12px;
+  }
+  #theater .clip-timeline .ct-playhead {
+    position: absolute; top: -2px; bottom: -2px; width: 2px;
+    background: #fff; box-shadow: 0 0 4px rgba(255,255,255,.7);
+    pointer-events: none; z-index: 3;
+  }
+
+  #theater.cycle-mode .close-btn#t-cycle {
+    background: rgba(75,123,236,.55);
+    border-color: var(--accent);
+  }
+
+  /* --- Right settings drawer -------------------------------------- */
+  #drawer {
+    position: fixed; top: 0; right: 0; bottom: 0;
+    width: 300px;
+    /* Above theater (z-index 2000) so it stays reachable during
+       playback — mid-edit settings changes should never require an
+       exit-and-re-enter. */
+    z-index: 2500;
+    background: var(--panel);
+    border-left: 1px solid var(--border);
+    box-shadow: -6px 0 20px rgba(0,0,0,.35);
+    display: flex; flex-direction: row;
+    transform: translateX(calc(100% - 34px));
+    transition: transform .18s ease;
+  }
+  #drawer:not(.collapsed) { transform: translateX(0); }
+  /* Vertical tab always visible on the LEFT edge of the drawer — this
+     is the exposed strip when the drawer is collapsed. */
+  #drawer .drawer-tab {
+    width: 34px; flex-shrink: 0;
+    background: var(--panel);
+    border: none; border-right: 1px solid var(--border);
+    color: var(--muted); cursor: pointer;
+    padding: 10px 0; font: inherit; font-size: 12px;
+    display: flex; flex-direction: column; align-items: center;
+    gap: 10px; letter-spacing: .04em;
+  }
+  #drawer .drawer-tab:hover { color: var(--text); background: var(--panel-2); }
+  #drawer .drawer-tab .icon { font-size: 16px; line-height: 1; }
+  #drawer .drawer-tab .lbl {
+    writing-mode: vertical-rl; text-orientation: mixed;
+    text-transform: uppercase; font-weight: 600;
+  }
+  #drawer .drawer-body {
+    flex: 1; min-width: 0;
+    display: flex; flex-direction: column;
+  }
+  #drawer .drawer-hdr {
+    display: flex; align-items: center; padding: 12px 14px;
+    border-bottom: 1px solid var(--border); flex-shrink: 0;
+  }
+  #drawer .drawer-hdr h2 {
+    margin: 0; flex: 1; font-size: 14px; font-weight: 600;
+  }
+  #drawer .drawer-hdr .drawer-close {
+    background: none; border: none; color: var(--muted);
+    cursor: pointer; font-size: 16px; padding: 4px 8px;
+  }
+  #drawer .drawer-hdr .drawer-close:hover { color: var(--text); }
+  #drawer .drawer-content {
+    flex: 1; overflow-y: auto; padding: 12px 14px 20px;
+  }
+  #drawer .drawer-section { margin-bottom: 20px; }
+  #drawer .drawer-section:last-child { margin-bottom: 0; }
+  #drawer .drawer-section-hdr {
+    text-transform: uppercase; letter-spacing: .04em;
+    font-size: 11px; font-weight: 600; color: var(--muted);
+    padding-bottom: 6px; margin-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  #drawer .drawer-row {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 0; font-size: 13px;
+    flex-wrap: wrap;
+  }
+  #drawer .drawer-row label {
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  #drawer .drawer-row .hint {
+    display: block; width: 100%; padding-top: 2px;
+    color: var(--muted); font-size: 11px; line-height: 1.35;
+  }
+  #drawer .btn { width: 100%; text-align: center; }
+  #drawer .edit-totals-row { align-items: baseline; gap: 10px; }
+  #drawer .edit-dur {
+    font-size: 24px; font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--text); letter-spacing: .01em;
+  }
+  #drawer .edit-breakdown {
+    color: var(--muted); font-size: 12px;
+    flex: 1; min-width: 0;
+  }
+  #drawer .src-count, #drawer .src-effective {
+    font-size: 15px; font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    color: var(--text);
+  }
+  #drawer .text-input {
+    background: var(--panel-2); color: var(--text);
+    border: 1px solid var(--border); border-radius: 4px;
+    padding: 4px 8px; font: inherit; font-size: 12px;
+    flex: 1; min-width: 0;
+  }
+  #drawer .text-input:focus { outline: none; border-color: var(--accent); }
+  #drawer select.text-input {
+    padding: 3px 6px;
+    -webkit-appearance: menulist;
+  }
+  #drawer #edits-section .drawer-row label {
+    display: flex; align-items: center; gap: 6px;
+    width: 100%; font-size: 12px; color: var(--muted);
+  }
+  #drawer .edits-btn-row { gap: 6px; flex-wrap: nowrap; }
+  #drawer .edits-btn {
+    flex: 1; min-width: 0; padding: 6px 6px;
+    font-size: 12px; white-space: nowrap;
+  }
+  #drawer .edits-btn.danger:hover {
+    border-color: #e07a5f;
+  }
+  #drawer #edits-status {
+    color: var(--muted); font-size: 11px; line-height: 1.35;
+    word-break: break-word;
+  }
+
+  .num-input {
+    background: var(--panel-2); color: var(--text);
+    border: 1px solid var(--border); border-radius: 4px;
+    padding: 3px 6px; width: 60px; font: inherit; font-size: 12px;
+    -moz-appearance: textfield;
+  }
+  .num-input::-webkit-outer-spin-button,
+  .num-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .num-input:focus { outline: none; border-color: var(--accent); }
+  .settings-row .grow { flex: 1; }
+  .btn.copied {
+    background: rgba(65,199,120,.22); border-color: rgba(65,199,120,.9);
+    color: #fff;
+  }
+
+  /* Theater top-bar duration inputs */
+  #theater .t-num-input {
+    background: rgba(255,255,255,.10); color: #fff;
+    border: 1px solid rgba(255,255,255,.20); border-radius: 3px;
+    padding: 1px 4px; width: 46px; font: inherit; font-size: 11px;
+    pointer-events: auto;
+    -moz-appearance: textfield;
+  }
+  #theater .t-num-input::-webkit-outer-spin-button,
+  #theater .t-num-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  #theater .t-num-input:focus { outline: none; border-color: var(--accent); }
+  #theater .global-dur {
+    display: inline-flex; align-items: center; gap: 4px;
+    color: rgba(255,255,255,.75); font-size: 11px;
+    pointer-events: none;
+  }
+  #theater .still-dur-wrap {
+    display: none; align-items: center; gap: 4px;
+    color: rgba(255,255,255,.85); font-size: 11px;
+    padding: 2px 8px; border-radius: 10px;
+    background: rgba(65,199,120,.30);
+    pointer-events: none;
+  }
+  #theater .still-dur-wrap.on { display: inline-flex; }
+  #theater .still-dur-wrap .t-num-input {
+    width: 44px; background: rgba(0,0,0,.35);
+  }
+  /* Per-clip playback-position override (0-100%). Shows when the current
+     item has any marks; blank = natural chronological order. */
+  #theater .ord-wrap {
+    display: none; align-items: center; gap: 4px;
+    color: rgba(255,255,255,.85); font-size: 11px;
+    padding: 2px 8px; border-radius: 10px;
+    background: rgba(240,199,80,.30);
+    pointer-events: none;
+  }
+  #theater .ord-wrap.on { display: inline-flex; }
+  #theater .ord-wrap .t-num-input {
+    width: 46px; background: rgba(0,0,0,.35);
+  }
+
   @media (max-width: 768px) {
     #theater .mini-map { width: 130px; height: 90px; bottom: 8px; left: 8px; }
     #theater .info-block { font-size: 11px; gap: 6px; }
@@ -453,6 +724,105 @@
   </div>
 </div>
 
+<aside id="drawer" class="collapsed" aria-label="settings drawer">
+  <button class="drawer-tab" id="drawer-tab"
+    title="settings — click to open / close">
+    <span class="icon">⚙</span>
+    <span class="lbl">settings</span>
+  </button>
+  <div class="drawer-body">
+    <div class="drawer-hdr">
+      <h2>settings</h2>
+      <button class="drawer-close" id="drawer-close" title="close">✕</button>
+    </div>
+    <div class="drawer-content">
+      <div class="drawer-section" id="edit-totals">
+        <div class="drawer-section-hdr">edit</div>
+        <div class="drawer-row edit-totals-row">
+          <span class="edit-dur" data-role="dur">0:00.00</span>
+          <span class="edit-breakdown" data-role="breakdown">nothing marked</span>
+        </div>
+      </div>
+      <div class="drawer-section" id="source-totals">
+        <div class="drawer-section-hdr">source</div>
+        <div class="drawer-row edit-totals-row">
+          <span class="edit-dur" data-role="clips-dur">0:00.00</span>
+          <span class="edit-breakdown" data-role="clips-breakdown">0 clips</span>
+        </div>
+        <div class="drawer-row edit-totals-row">
+          <span class="src-count" data-role="stills-count">0</span>
+          <span class="edit-breakdown">stills</span>
+        </div>
+        <div class="drawer-row edit-totals-row">
+          <span class="src-effective" data-role="effective-dur">0:00.00</span>
+          <span class="edit-breakdown">effective, if every still played 2s</span>
+        </div>
+      </div>
+      <div class="drawer-section" id="edits-section">
+        <div class="drawer-section-hdr">edits</div>
+        <div class="drawer-row edits-name-row">
+          <label class="edits-name-label" title="rename this edit — commits on blur or Enter">
+            name:
+            <input type="text" class="text-input" id="edits-name-input"
+              placeholder="unnamed" autocomplete="off" spellcheck="false">
+          </label>
+        </div>
+        <div class="drawer-row">
+          <label title="switch to another saved edit">
+            load:
+            <select id="edits-select" class="text-input"></select>
+          </label>
+        </div>
+        <div class="drawer-row edits-btn-row">
+          <button class="btn edits-btn" id="edits-new"
+            title="start a fresh empty edit">＋ new</button>
+          <button class="btn edits-btn" id="edits-duplicate"
+            title="clone the current edit under a new name">⎘ duplicate</button>
+        </div>
+        <div class="drawer-row edits-btn-row">
+          <button class="btn edits-btn" id="edits-delete"
+            title="delete this edit permanently">🗑 delete</button>
+          <button class="btn edits-btn" id="edits-copy-url"
+            title="copy a shareable URL that reopens this edit">🔗 url</button>
+        </div>
+        <div class="drawer-row edits-btn-row">
+          <button class="btn edits-btn" id="edits-export-file"
+            title="save this edit as a .json file">⬇ .json</button>
+          <button class="btn edits-btn" id="edits-import-file"
+            title="load an edit from a .json file">⬆ .json</button>
+          <input type="file" id="edits-file-input"
+            accept=".json,application/json" style="display:none">
+        </div>
+        <div class="drawer-row">
+          <span class="hint" id="edits-status">initializing…</span>
+        </div>
+      </div>
+      <div class="drawer-section">
+        <div class="drawer-section-hdr">stills</div>
+        <div class="drawer-row">
+          <label title="how long each included still is shown during cycle play">
+            still dwell:
+            <input type="number" class="num-input" id="still-dur-input"
+              data-role="global-still-dur" min="0.1" step="0.5" value="4">
+            s
+          </label>
+          <span class="hint">applies to every included still in cycle play.
+            per-still overrides live on each still's badge in theater.</span>
+        </div>
+      </div>
+      <div class="drawer-section">
+        <div class="drawer-section-hdr">export</div>
+        <div class="drawer-row">
+          <button class="btn" id="export-btn"
+            title="copy all clip / still marks to the clipboard as JSON">⧉ copy marks JSON</button>
+          <span class="hint">chronological list of every clip with sub-clip in/out points
+            plus every included still with its effective dwell.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</aside>
+
 <div id="theater">
   <div class="stage" id="theater-stage">
     <div class="info-top">
@@ -460,8 +830,32 @@
       <span class="name" id="t-name"></span>
       <span class="sep">·</span>
       <span class="cluster-lbl" id="t-cluster-lbl"></span>
+      <span class="inc-badge" id="t-inc-badge" title="included as still">★ included</span>
+      <span class="still-dur-wrap" id="t-still-dur-wrap"
+        title="per-still dwell override (seconds) — blank uses the global">
+        <input type="number" class="t-num-input" id="t-still-dur-input"
+          min="0.1" step="0.5" placeholder="—">
+        s
+      </span>
+      <span class="ord-wrap" id="t-ord-wrap"
+        title="playback position override (0-100% of the final edit) — blank = natural chronological">
+        pos:
+        <input type="number" class="t-num-input" id="t-ord-input"
+          min="0" max="100" step="0.5" placeholder="—">
+        %
+      </span>
+      <span class="marks-count" id="t-marks-count" title="marked sub-clips"></span>
       <span class="spacer"></span>
-      <button class="close-btn" id="t-close" title="exit (esc)">✕ exit</button>
+      <span class="global-dur" title="global still dwell (seconds)">
+        stills:
+        <input type="number" class="t-num-input" id="t-global-dur-input"
+          data-role="global-still-dur" min="0.1" step="0.5" value="4">
+        s
+      </span>
+      <button class="close-btn" id="t-cycle" title="cycle marked sub-clips (c)">▶ cycle</button>
+      <button class="close-btn" id="t-export"
+        title="copy all marks to clipboard as JSON">⧉ export</button>
+      <button class="close-btn" id="t-close" title="exit (esc when no marks)">✕ exit</button>
     </div>
     <div class="mini-map" id="theater-map"></div>
     <div class="autoplay-toast" id="t-autoplay-toast">🔇 sound blocked · click to enable</div>
@@ -1155,16 +1549,1107 @@
     _prevClusterIdx: -1,
     tMin: 0, tMax: 0, tSpan: 1,
     // pacing
-    imageMs: 4000,          // real-time image dwell
-    fastImageMs: 1500,      // fast image dwell
+    stillDur: 4.0,          // GLOBAL still dwell in seconds (persisted;
+                            // per-still override lives in marks[id].dur)
+    fastImageMs: 1500,      // fast image dwell (fixed)
     fastVideoMs: 3000,      // fast video snippet length
     videoStartFrac: 0.15,   // fast: skip the first N% of the video
     // handles
     mediaEl: null,
     imgTimer: null, capTimer: null, cursorRAF: null,
+    // sub-clip marks (i / o):
+    //   marks.get(itemId) = {
+    //     ranges: [{in, out}],
+    //     pending: { kind: 'in'|'out', t: number } | null,
+    //     included: bool (photos only),
+    //     dur?: number,      // per-still dwell override (seconds)
+    //     orderPct?: number, // per-clip playback position override (0-100)
+    //   }
+    // Pending is transient — a dangling in OR out that the next opposite
+    // key press closes into a range. Either kind can dangle; pressing
+    // the same key again cancels it. In/out never span clips.
+    marks: new Map(),
+    // Cycle-play state
+    cycleMode: false,       // when true, playback walks marked sub-clips
+    cycleQueue: [],         // [{itemId, kind, in, out}], in-order
+    cycleIdx: 0,
+    subclipEndTimer: null,  // fires when the current cycle segment ends
   };
   let theaterMap = null;
   const theaterMarkers = new Map();
+
+  // --- Sub-clip mark persistence (cookie) -----------------------------
+  //
+  // Marks survive reloads via a per-event cookie so half-cut work isn't
+  // lost. `pending` is transient by design (a dangling `i` with no `o`)
+  // and is never persisted. Cookies cap at ~4KB per host — for very
+  // large edits we fall back to localStorage as a second store so nothing
+  // silently drops, but the cookie stays the source of truth.
+  const MARKS_SCOPE = (() => {
+    const raw = (manifest.title || location.pathname || 'event') + '';
+    return raw.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 40) || 'event';
+  })();
+  const MARKS_KEY = 'evmk_' + MARKS_SCOPE;
+
+  // Persistence keys marks by `orig_name` (filename), not by the manifest's
+  // synthesized id — so if the manifest is re-generated with different ids
+  // (added / removed / re-ordered clips) the marks still resolve. Entries
+  // whose filename no longer appears in the manifest are silently dropped
+  // on load. Multiple items with the same filename share the same entry
+  // (dedup-on-load); last-write-wins on save.
+  const MARKS_SCHEMA_VERSION = 2;
+  function markKeyForItem(it) {
+    return (it && (it.orig_name || it.id)) || null;
+  }
+  function serializeMarks() {
+    const byKey = {};
+    theater.marks.forEach((mk, id) => {
+      const it = items.find(x => x.id === id);
+      const key = markKeyForItem(it);
+      if (!key) return;
+      const e = {};
+      if (mk.ranges && mk.ranges.length) {
+        e.r = mk.ranges.map(r => [+r.in.toFixed(3), +r.out.toFixed(3)]);
+      }
+      if (mk.included) e.x = 1;
+      if (mk.dur != null && isFinite(mk.dur) && mk.dur > 0) e.d = +mk.dur.toFixed(2);
+      if (mk.orderPct != null && isFinite(mk.orderPct)) e.o = +mk.orderPct.toFixed(2);
+      if (Object.keys(e).length) byKey[key] = e;   // last-write-wins on dupes
+    });
+    return { v: MARKS_SCHEMA_VERSION, m: byKey };
+  }
+  function deserializeMarks(payload) {
+    const out = new Map();
+    if (!payload || typeof payload !== 'object') return out;
+    // Accept v2 (filename-keyed) and legacy v1 (id-keyed, flat map).
+    const isV2 = payload.v === MARKS_SCHEMA_VERSION
+                 && payload.m && typeof payload.m === 'object';
+    const byKey = isV2 ? payload.m : payload;
+    // Prebuild filename→[items] index once — an event with lots of clips
+    // shouldn't do an O(n) find per entry.
+    const byFilename = new Map();
+    items.forEach(it => {
+      const k = markKeyForItem(it);
+      if (!k) return;
+      const bucket = byFilename.get(k) || [];
+      bucket.push(it);
+      byFilename.set(k, bucket);
+    });
+    const byId = new Map(items.map(it => [it.id, it]));
+    let dropped = 0;
+    Object.entries(byKey).forEach(([key, e]) => {
+      if (!e || typeof e !== 'object') return;
+      const entry = {
+        ranges: Array.isArray(e.r)
+          ? e.r.filter(p => Array.isArray(p) && p.length === 2)
+               .map(([a, b]) => ({ in: +a, out: +b }))
+          : [],
+        pending: null,
+        included: !!e.x,
+      };
+      if (e.d != null && isFinite(e.d) && e.d > 0) entry.dur = +e.d;
+      if (e.o != null && isFinite(e.o)) entry.orderPct = Math.max(0, Math.min(100, +e.o));
+      // v2 keys are filenames — may map to N items (dup filename).
+      // v1 keys are ids — may or may not still exist.
+      let targets = isV2 ? (byFilename.get(key) || []) : [];
+      if (!isV2 && byId.has(key)) targets = [byId.get(key)];
+      if (!isV2 && !byId.has(key)) {
+        // legacy id no longer present — try filename fallback if the id
+        // happens to match some current filename.
+        targets = byFilename.get(key) || [];
+      }
+      if (!targets.length) { dropped++; return; }
+      targets.forEach(it => {
+        // Deep-copy the ranges so per-item mutations don't leak into
+        // sibling items that share the same filename.
+        out.set(it.id, {
+          ranges: entry.ranges.map(r => ({ in: r.in, out: r.out })),
+          pending: null,
+          included: entry.included,
+          ...(entry.dur != null ? { dur: entry.dur } : {}),
+          ...(entry.orderPct != null ? { orderPct: entry.orderPct } : {}),
+        });
+      });
+    });
+    if (dropped) {
+      console.info(`[event] dropped ${dropped} orphaned mark${dropped === 1 ? '' : 's'} whose file is no longer in the manifest`);
+    }
+    return out;
+  }
+  function readCookie(name) {
+    const target = name + '=';
+    const parts = (document.cookie || '').split(';');
+    for (let p of parts) {
+      p = p.trim();
+      if (p.indexOf(target) === 0) {
+        try { return decodeURIComponent(p.slice(target.length)); }
+        catch (_) { return p.slice(target.length); }
+      }
+    }
+    return null;
+  }
+  function writeCookie(name, value) {
+    // 1-year lifetime, path=/, SameSite=Lax. Set as concise as possible so
+    // it survives across the whole host regardless of the URL used to load.
+    document.cookie =
+      `${name}=${encodeURIComponent(value)}; path=/; max-age=31536000; SameSite=Lax`;
+  }
+  let _saveMarksTimer = null, _lastSaveWarned = false;
+  function saveMarks() {
+    // Coalesce rapid changes (e.g. sweeping esc-clears) into one write.
+    if (_saveMarksTimer) clearTimeout(_saveMarksTimer);
+    _saveMarksTimer = setTimeout(() => {
+      _saveMarksTimer = null;
+      let payload;
+      try { payload = JSON.stringify(serializeMarks()); }
+      catch (_) { return; }
+      writeCookie(MARKS_KEY, payload);
+      // localStorage mirror — same key, same payload. Survives cookie
+      // eviction and gives us headroom past the 4KB cookie limit.
+      try { localStorage.setItem(MARKS_KEY, payload); } catch (_) {}
+      // Also fold this snapshot into the active named edit — this is
+      // what makes "no lost work" real: every mutation lands in the
+      // edits blob under whatever edit the user is currently on.
+      upsertActiveSlot();
+      // Warn once if we appear to have overflowed the cookie budget.
+      if (!_lastSaveWarned && payload.length > 3800) {
+        console.warn('[event] marks payload approaching cookie size cap:',
+          payload.length, 'bytes — localStorage mirror will keep the full set');
+        _lastSaveWarned = true;
+      }
+    }, 120);
+  }
+  function loadMarks() {
+    let raw = readCookie(MARKS_KEY);
+    if (!raw) {
+      try { raw = localStorage.getItem(MARKS_KEY); } catch (_) {}
+    }
+    if (!raw) return;
+    try {
+      const parsed = JSON.parse(raw);
+      theater.marks = deserializeMarks(parsed);
+    } catch (_) { /* corrupt cookie — ignore */ }
+  }
+
+  // --- Sub-clip mark helpers ------------------------------------------
+  function getMarks(id) {
+    if (!theater.marks.has(id)) {
+      theater.marks.set(id, { ranges: [], pending: null, included: false });
+    }
+    // Migrate: an older in-memory shape stored pending as a bare number.
+    // Upgrade it to the {kind,t} shape so downstream code is uniform.
+    const m = theater.marks.get(id);
+    if (typeof m.pending === 'number') m.pending = { kind: 'in', t: m.pending };
+    return m;
+  }
+  function marksSummary() {
+    let ranges = 0, incl = 0;
+    theater.marks.forEach(m => {
+      ranges += (m.ranges || []).length;
+      if (m.included) incl += 1;
+    });
+    return { ranges, incl, total: ranges + incl };
+  }
+  function updateMarksCountBadge() {
+    const el = document.getElementById('t-marks-count');
+    if (el) {
+      const s = marksSummary();
+      if (!s.total) { el.classList.remove('on'); el.textContent = ''; }
+      else {
+        const parts = [];
+        if (s.ranges) parts.push(`${s.ranges} clip${s.ranges === 1 ? '' : 's'}`);
+        if (s.incl)   parts.push(`${s.incl} still${s.incl === 1 ? '' : 's'}`);
+        el.textContent = parts.join(' · ');
+        el.classList.add('on');
+      }
+    }
+    // Marks and totals are two views of the same source — keep them in
+    // lockstep so every mutation path stays honest without extra calls.
+    updateEditTotals();
+  }
+  // Sum of every marked sub-clip range + every included still (using
+  // per-still override where set, else the global dwell). This is the
+  // "assembled edit" length the viewer would produce if it stitched the
+  // marks together — used to render the settings-drawer readout.
+  function computeEditTotals() {
+    let sec = 0, clipCount = 0, stillCount = 0;
+    theater.marks.forEach((mk) => {
+      if (mk.ranges && mk.ranges.length) {
+        mk.ranges.forEach(r => {
+          const d = Math.max(0, r.out - r.in);
+          if (d > 0) { sec += d; clipCount++; }
+        });
+      }
+      if (mk.included) {
+        const dur = (mk.dur != null && isFinite(mk.dur) && mk.dur > 0)
+          ? mk.dur : theater.stillDur;
+        sec += dur;
+        stillCount++;
+      }
+    });
+    return { sec, clipCount, stillCount };
+  }
+  function updateEditTotals() {
+    const el = document.getElementById('edit-totals');
+    if (!el) return;
+    const durEl = el.querySelector('[data-role="dur"]');
+    const bkEl  = el.querySelector('[data-role="breakdown"]');
+    const t = computeEditTotals();
+    if (durEl) durEl.textContent = fmtSec(t.sec);
+    if (bkEl) {
+      const parts = [];
+      if (t.clipCount) parts.push(`${t.clipCount} sub-clip${t.clipCount === 1 ? '' : 's'}`);
+      if (t.stillCount) parts.push(`${t.stillCount} still${t.stillCount === 1 ? '' : 's'}`);
+      bkEl.textContent = parts.length ? parts.join(' + ') : 'nothing marked';
+    }
+  }
+
+  // Source-side totals: the whole manifest, before any user marking.
+  // `effectiveSec` is the hypothetical edit length if every still played
+  // for a fixed 2s (the "how big is the corpus in seconds" answer) —
+  // useful as a ceiling next to the mid-edit total above.
+  const SRC_STILL_SEC = 2;
+  function computeSourceTotals() {
+    let clipSec = 0, clipCount = 0, stillCount = 0;
+    items.forEach(it => {
+      if (it.kind === 'photo') { stillCount++; return; }
+      clipCount++;
+      if (it.duration != null && isFinite(it.duration)) clipSec += it.duration;
+    });
+    return {
+      clipCount, clipSec, stillCount,
+      effectiveSec: clipSec + stillCount * SRC_STILL_SEC,
+    };
+  }
+  function updateSourceTotals() {
+    const el = document.getElementById('source-totals');
+    if (!el) return;
+    const t = computeSourceTotals();
+    const clipsDur = el.querySelector('[data-role="clips-dur"]');
+    const clipsBk  = el.querySelector('[data-role="clips-breakdown"]');
+    const stillsN  = el.querySelector('[data-role="stills-count"]');
+    const eff      = el.querySelector('[data-role="effective-dur"]');
+    if (clipsDur) clipsDur.textContent = fmtSec(t.clipSec);
+    if (clipsBk)  clipsBk.textContent = `in ${t.clipCount} clip${t.clipCount === 1 ? '' : 's'}`;
+    if (stillsN)  stillsN.textContent = String(t.stillCount);
+    if (eff)      eff.textContent = fmtSec(t.effectiveSec);
+  }
+
+  // ================================================================ Edits
+  //
+  // Named, versioned edits. The user can maintain several cuts of the
+  // same event ("rough", "director's", "vertical") without losing work
+  // between them. All edits for an event live in ONE localStorage blob
+  // keyed by the event's scope; the "active" edit's marks live in
+  // `theater.marks` and are autosaved on every mutation.
+  //
+  // Sources of truth (in priority order at load time):
+  //   1. `?edit=<name>` URL param — deterministic, shareable
+  //   2. blob.activeName — last-worked-on edit
+  //   3. any surviving edit                  (deterministic fallback)
+  //   4. new empty "autosave" edit           (first-ever load)
+  //
+  // File I/O: a saved edit exports as a self-describing JSON file
+  // (kind: "event-viewer-edit") that round-trips back through import.
+  const EDITS_KEY = 'evmk_edits_' + MARKS_SCOPE;
+  const EDIT_FILE_KIND = 'event-viewer-edit';
+  const editsState = {
+    activeName: null,
+    blob: null,   // { activeName, edits: { name: {...} } }
+  };
+  function _nowISO() { return new Date().toISOString(); }
+  function loadEditsBlob() {
+    try {
+      const raw = localStorage.getItem(EDITS_KEY);
+      if (!raw) return { activeName: null, edits: {} };
+      const p = JSON.parse(raw);
+      return {
+        activeName: (p && typeof p.activeName === 'string') ? p.activeName : null,
+        edits: (p && p.edits && typeof p.edits === 'object') ? p.edits : {},
+      };
+    } catch (_) { return { activeName: null, edits: {} }; }
+  }
+  function saveEditsBlob() {
+    if (!editsState.blob) return;
+    try { localStorage.setItem(EDITS_KEY, JSON.stringify(editsState.blob)); }
+    catch (_) {}
+  }
+  function currentEditPayload() {
+    // We already have a v2 filename-keyed serializer; reuse its `.m`.
+    return {
+      marks: serializeMarks().m,
+      globalStillDur: theater.stillDur,
+      v: MARKS_SCHEMA_VERSION,
+      updatedAt: _nowISO(),
+    };
+  }
+  function upsertActiveSlot() {
+    if (!editsState.blob) editsState.blob = loadEditsBlob();
+    const name = editsState.activeName;
+    if (!name) return;
+    const existing = editsState.blob.edits[name] || {};
+    editsState.blob.edits[name] = {
+      ...existing,
+      ...currentEditPayload(),
+      name,
+      createdAt: existing.createdAt || _nowISO(),
+    };
+    editsState.blob.activeName = name;
+    saveEditsBlob();
+  }
+  function applyEditToMemory(ed) {
+    // Replace theater.marks with this edit's marks (filename-keyed).
+    theater.marks = deserializeMarks({
+      v: ed.v || MARKS_SCHEMA_VERSION,
+      m: ed.marks || {},
+    });
+    if (ed.globalStillDur && isFinite(ed.globalStillDur) && ed.globalStillDur > 0) {
+      theater.stillDur = ed.globalStillDur;
+      saveGlobalStillDur();
+    }
+    // Sync every visible UI surface we know about.
+    document.querySelectorAll('[data-role="global-still-dur"]').forEach(el => {
+      el.value = String(theater.stillDur);
+    });
+    // If theater is on stage, refresh badges/inputs for the current item.
+    if (theater.active) {
+      const it = theater.playlist[theater.index];
+      if (it) {
+        const badge = document.getElementById('t-inc-badge');
+        const mk = theater.marks.get(it.id);
+        if (badge) badge.classList.toggle('on', !!(mk && mk.included));
+        updateStillDurUI(it);
+        updateOrderPctUI(it);
+        updateClipTimeline();
+      }
+    }
+    updateMarksCountBadge();   // this also fires updateEditTotals
+  }
+  function switchToEdit(name) {
+    if (!editsState.blob) editsState.blob = loadEditsBlob();
+    if (!editsState.blob.edits[name]) return false;
+    editsState.activeName = name;
+    editsState.blob.activeName = name;
+    saveEditsBlob();
+    applyEditToMemory(editsState.blob.edits[name]);
+    _updateURLForActive();
+    refreshEditsUI();
+    return true;
+  }
+  function createEdit(name, opts) {
+    opts = opts || {};
+    if (!name) return null;
+    name = String(name).trim();
+    if (!name) return null;
+    if (!editsState.blob) editsState.blob = loadEditsBlob();
+    if (editsState.blob.edits[name] && !opts.overwrite) {
+      if (!confirm(`an edit named "${name}" already exists — overwrite?`)) return null;
+    }
+    const seed = opts.clone
+      ? currentEditPayload()
+      : { marks: {}, globalStillDur: theater.stillDur,
+          v: MARKS_SCHEMA_VERSION, updatedAt: _nowISO() };
+    editsState.blob.edits[name] = { name, createdAt: _nowISO(), ...seed };
+    editsState.blob.activeName = name;
+    editsState.activeName = name;
+    if (!opts.clone) theater.marks = new Map();
+    saveEditsBlob();
+    applyEditToMemory(editsState.blob.edits[name]);
+    _updateURLForActive();
+    refreshEditsUI();
+    return name;
+  }
+  function deleteActiveEdit() {
+    if (!editsState.activeName) return;
+    const name = editsState.activeName;
+    if (!confirm(`delete edit "${name}"? this can't be undone.`)) return;
+    if (!editsState.blob) editsState.blob = loadEditsBlob();
+    delete editsState.blob.edits[name];
+    const remain = Object.keys(editsState.blob.edits);
+    if (remain.length) {
+      // Switch to most-recently-updated remaining edit.
+      remain.sort((a, b) => (editsState.blob.edits[b].updatedAt || '')
+                            .localeCompare(editsState.blob.edits[a].updatedAt || ''));
+      editsState.activeName = remain[0];
+      editsState.blob.activeName = remain[0];
+      applyEditToMemory(editsState.blob.edits[remain[0]]);
+    } else {
+      // No edits left — start a fresh autosave.
+      editsState.activeName = null;
+      editsState.blob.activeName = null;
+      theater.marks = new Map();
+      createEdit('autosave', {});
+      return;   // createEdit persists + refreshes
+    }
+    saveEditsBlob();
+    _updateURLForActive();
+    refreshEditsUI();
+  }
+  function renameActive(newName) {
+    if (!editsState.activeName) return;
+    newName = String(newName || '').trim();
+    if (!newName || newName === editsState.activeName) {
+      refreshEditsUI(); return;
+    }
+    if (!editsState.blob) editsState.blob = loadEditsBlob();
+    if (editsState.blob.edits[newName]) {
+      if (!confirm(`overwrite existing edit "${newName}"?`)) { refreshEditsUI(); return; }
+    }
+    const cur = editsState.blob.edits[editsState.activeName];
+    delete editsState.blob.edits[editsState.activeName];
+    editsState.blob.edits[newName] = { ...cur, name: newName, updatedAt: _nowISO() };
+    editsState.blob.activeName = newName;
+    editsState.activeName = newName;
+    saveEditsBlob();
+    _updateURLForActive();
+    refreshEditsUI();
+  }
+  function exportActiveAsFile() {
+    const name = editsState.activeName || 'unnamed';
+    const payload = {
+      kind: EDIT_FILE_KIND,
+      v: MARKS_SCHEMA_VERSION,
+      event_title: manifest.title || null,
+      event_scope: MARKS_SCOPE,
+      edit: { name, ...currentEditPayload() },
+      readable: buildMarksExport(),
+      exported_at: _nowISO(),
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)],
+      { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${name.replace(/[^a-zA-Z0-9._-]/g, '_')}.edit.json`;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+  async function importFromFile(file) {
+    if (!file) return;
+    let text;
+    try { text = await file.text(); }
+    catch (e) { alert('could not read file'); return; }
+    let parsed;
+    try { parsed = JSON.parse(text); }
+    catch (e) { alert('invalid JSON'); return; }
+    // Accept our own edit-file shape, a bare edit object, or the raw
+    // "marks payload" shape that older serialization exported.
+    let ed = null;
+    if (parsed && parsed.kind === EDIT_FILE_KIND && parsed.edit) ed = parsed.edit;
+    else if (parsed && parsed.marks && typeof parsed.marks === 'object') ed = parsed;
+    else if (parsed && parsed.m && typeof parsed.m === 'object') {
+      ed = { marks: parsed.m, v: parsed.v || MARKS_SCHEMA_VERSION };
+    }
+    if (!ed) { alert('unrecognized edit-file format'); return; }
+    const suggested = (ed.name || (file.name || '').replace(/\.edit\.json$|\.json$/i, '') || 'imported').trim();
+    const chosen = prompt('save imported edit as:', suggested);
+    if (!chosen) return;
+    if (!editsState.blob) editsState.blob = loadEditsBlob();
+    editsState.blob.edits[chosen] = {
+      name: chosen,
+      createdAt: _nowISO(),
+      updatedAt: _nowISO(),
+      marks: ed.marks || {},
+      globalStillDur: (typeof ed.globalStillDur === 'number' && ed.globalStillDur > 0)
+        ? ed.globalStillDur : theater.stillDur,
+      v: ed.v || MARKS_SCHEMA_VERSION,
+    };
+    editsState.blob.activeName = chosen;
+    editsState.activeName = chosen;
+    saveEditsBlob();
+    applyEditToMemory(editsState.blob.edits[chosen]);
+    _updateURLForActive();
+    refreshEditsUI();
+  }
+  function _updateURLForActive() {
+    // Keep the address bar in sync so a refresh / share reopens this
+    // exact edit. Use replaceState to avoid polluting browser history.
+    try {
+      const u = new URL(location.href);
+      if (editsState.activeName) u.searchParams.set('edit', editsState.activeName);
+      else u.searchParams.delete('edit');
+      history.replaceState(null, '', u.toString());
+    } catch (_) {}
+  }
+  function copyEditURL(btn) {
+    try {
+      const u = new URL(location.href);
+      if (editsState.activeName) u.searchParams.set('edit', editsState.activeName);
+      const url = u.toString();
+      const done = () => {
+        if (!btn) return;
+        const o = btn.textContent;
+        btn.classList.add('copied');
+        btn.textContent = '✓ copied';
+        setTimeout(() => { btn.classList.remove('copied'); btn.textContent = o; }, 1400);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url).then(done, () => { window.prompt('copy url:', url); done(); });
+      } else {
+        window.prompt('copy url:', url);
+        done();
+      }
+    } catch (_) {}
+  }
+  function refreshEditsUI() {
+    const nameInput = document.getElementById('edits-name-input');
+    const select    = document.getElementById('edits-select');
+    const status    = document.getElementById('edits-status');
+    if (!editsState.blob) editsState.blob = loadEditsBlob();
+    const names = Object.keys(editsState.blob.edits).sort((a, b) => {
+      const ta = editsState.blob.edits[a].updatedAt || '';
+      const tb = editsState.blob.edits[b].updatedAt || '';
+      return tb.localeCompare(ta);   // most-recent first
+    });
+    if (nameInput && document.activeElement !== nameInput) {
+      nameInput.value = editsState.activeName || '';
+    }
+    if (select) {
+      const escName = n => n.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+      select.innerHTML = names.length
+        ? names.map(n => `<option value="${escName(n)}" ${n === editsState.activeName ? 'selected' : ''}>${escName(n)}</option>`).join('')
+        : '<option value="">— no saved edits —</option>';
+    }
+    if (status) {
+      if (editsState.activeName) {
+        const ed = editsState.blob.edits[editsState.activeName];
+        let stamp = '';
+        if (ed && ed.updatedAt) {
+          try { stamp = ' · saved ' + new Date(ed.updatedAt).toLocaleString([], { hour: 'numeric', minute: '2-digit' }); }
+          catch (_) {}
+        }
+        status.textContent = `active: "${editsState.activeName}" (${names.length} total)${stamp}`;
+      } else {
+        status.textContent = `${names.length} saved edit${names.length === 1 ? '' : 's'}`;
+      }
+    }
+  }
+  function initEditsAtBootstrap() {
+    editsState.blob = loadEditsBlob();
+    // Migration: if a legacy MARKS_KEY payload was already loaded into
+    // theater.marks by loadMarks(), fold it into a new "autosave" edit.
+    const hasAnyLoadedMarks = theater.marks.size > 0;
+    const hasAnyEdits = Object.keys(editsState.blob.edits).length > 0;
+    if (!hasAnyEdits && hasAnyLoadedMarks) {
+      editsState.blob.edits['autosave'] = {
+        name: 'autosave',
+        createdAt: _nowISO(),
+        updatedAt: _nowISO(),
+        marks: serializeMarks().m,
+        globalStillDur: theater.stillDur,
+        v: MARKS_SCHEMA_VERSION,
+      };
+      editsState.blob.activeName = 'autosave';
+      saveEditsBlob();
+    }
+    // Which edit should we open?
+    let wanted = null;
+    try { wanted = new URL(location.href).searchParams.get('edit'); }
+    catch (_) {}
+    let target = null;
+    if (wanted && editsState.blob.edits[wanted]) target = wanted;
+    else if (editsState.blob.activeName && editsState.blob.edits[editsState.blob.activeName]) {
+      target = editsState.blob.activeName;
+    } else {
+      const names = Object.keys(editsState.blob.edits);
+      if (names.length) {
+        names.sort((a, b) => (editsState.blob.edits[b].updatedAt || '')
+                             .localeCompare(editsState.blob.edits[a].updatedAt || ''));
+        target = names[0];
+      }
+    }
+    if (target) {
+      switchToEdit(target);
+    } else if (wanted) {
+      // URL specified an edit that doesn't exist — create it empty so
+      // the user's future edits attach to that name.
+      createEdit(wanted, { overwrite: true });
+    } else {
+      // First-ever load with nothing to migrate: spin up an autosave slot.
+      createEdit('autosave', { overwrite: true });
+    }
+    // Wire up buttons + inputs.
+    const on = (id, ev, fn) => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener(ev, fn);
+    };
+    on('edits-name-input', 'change', e => renameActive(e.currentTarget.value));
+    on('edits-name-input', 'keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); }
+    });
+    on('edits-select', 'change', e => {
+      const v = e.currentTarget.value;
+      if (v && v !== editsState.activeName) switchToEdit(v);
+    });
+    on('edits-new', 'click', () => {
+      const name = prompt('name for the new empty edit:', 'edit ' +
+        (Object.keys(editsState.blob.edits).length + 1));
+      if (name) createEdit(name, {});
+    });
+    on('edits-duplicate', 'click', () => {
+      const base = editsState.activeName || 'edit';
+      const name = prompt('duplicate as:', base + ' copy');
+      if (name) createEdit(name, { clone: true });
+    });
+    on('edits-delete', 'click', () => deleteActiveEdit());
+    on('edits-copy-url', 'click', e => copyEditURL(e.currentTarget));
+    on('edits-export-file', 'click', () => exportActiveAsFile());
+    on('edits-import-file', 'click', () => {
+      const inp = document.getElementById('edits-file-input');
+      if (inp) inp.click();
+    });
+    on('edits-file-input', 'change', async e => {
+      const file = e.currentTarget.files && e.currentTarget.files[0];
+      e.currentTarget.value = '';   // reset so the same file can be re-picked
+      if (file) await importFromFile(file);
+    });
+    refreshEditsUI();
+  }
+  // "Near" tolerance for snapping i/o presses to an existing marker on
+  // this clip: 5% of clip duration, at least 0.5s. Small enough to still
+  // let the user place a fresh marker near an old one; big enough that a
+  // small mis-tap on a keyboard scrub lands on the intended endpoint.
+  function snapWindowSec(it) {
+    const m = theater.mediaEl;
+    const dur = (m && isFinite(m.duration))
+      ? m.duration : (it.duration || 0);
+    return Math.max(0.5, (dur || 0) * 0.05);
+  }
+  // Close a dangling pending with the just-pressed opposite key. Handles
+  // ordering (min/max) so an out-first / in-later sequence commits the
+  // same range as in-first / out-later.
+  function commitPendingWith(m, it, t) {
+    const a = Math.min(m.pending.t, t);
+    const b = Math.max(m.pending.t, t);
+    let committed = false;
+    if (b - a >= 0.05) {
+      m.ranges.push({ in: a, out: b });
+      m.ranges.sort((x, y) => x.in - y.in);
+      committed = true;
+    }
+    m.pending = null;
+    updateClipTimeline();
+    updateMarksCountBadge();
+    if (committed) { updateOrderPctUI(it); saveMarks(); }
+  }
+  function markIn(it, t) {
+    const m = getMarks(it.id);
+    t = clampToDur(it, t);
+    // Snap to the nearest existing IN on this clip (pending-in OR the
+    // in-edge of any confirmed range). Ignores a pending-out — a lone
+    // out mark has no "in" to snap onto.
+    const win = snapWindowSec(it);
+    let best = null, bestD = Infinity;
+    if (m.pending && m.pending.kind === 'in') {
+      const d = Math.abs(m.pending.t - t);
+      if (d < bestD) { bestD = d; best = { kind: 'pending' }; }
+    }
+    (m.ranges || []).forEach((r, i) => {
+      const d = Math.abs(r.in - t);
+      if (d < bestD) { bestD = d; best = { kind: 'range', i }; }
+    });
+    if (best && bestD <= win) {
+      if (best.kind === 'pending') {
+        m.pending.t = t;
+        updateClipTimeline();
+        return;
+      }
+      const r = m.ranges[best.i];
+      r.in = Math.min(t, r.out - 0.05);
+      m.ranges.sort((x, y) => x.in - y.in);
+      updateClipTimeline();
+      updateMarksCountBadge();
+      updateOrderPctUI(it);
+      saveMarks();
+      return;
+    }
+    // No snap. Behavior depends on the current pending:
+    //   pending-in  → cancel it (the "two i's undo" rule)
+    //   pending-out → close as a range using min/max(pending.t, t)
+    //   nothing     → start a fresh pending-in
+    if (m.pending && m.pending.kind === 'in') {
+      m.pending = null; updateClipTimeline(); return;
+    }
+    if (m.pending && m.pending.kind === 'out') {
+      commitPendingWith(m, it, t); return;
+    }
+    m.pending = { kind: 'in', t };
+    updateClipTimeline();
+    updateMarksCountBadge();
+  }
+  function markOut(it, t) {
+    const m = getMarks(it.id);
+    t = clampToDur(it, t);
+    // Snap to the nearest OUT (pending-out OR range.out).
+    const win = snapWindowSec(it);
+    let best = null, bestD = Infinity;
+    if (m.pending && m.pending.kind === 'out') {
+      const d = Math.abs(m.pending.t - t);
+      if (d < bestD) { bestD = d; best = { kind: 'pending' }; }
+    }
+    (m.ranges || []).forEach((r, i) => {
+      const d = Math.abs(r.out - t);
+      if (d < bestD) { bestD = d; best = { kind: 'range', i }; }
+    });
+    if (best && bestD <= win) {
+      if (best.kind === 'pending') {
+        m.pending.t = t;
+        updateClipTimeline();
+        return;
+      }
+      const r = m.ranges[best.i];
+      r.out = Math.max(t, r.in + 0.05);
+      m.ranges.sort((x, y) => x.in - y.in);
+      updateClipTimeline();
+      updateMarksCountBadge();
+      updateOrderPctUI(it);
+      saveMarks();
+      return;
+    }
+    // No snap. Symmetric to markIn:
+    //   pending-out → cancel (the "two o's undo" rule)
+    //   pending-in  → close as a range
+    //   nothing     → start a fresh pending-out (out-first is allowed)
+    if (m.pending && m.pending.kind === 'out') {
+      m.pending = null; updateClipTimeline(); return;
+    }
+    if (m.pending && m.pending.kind === 'in') {
+      commitPendingWith(m, it, t); return;
+    }
+    m.pending = { kind: 'out', t };
+    updateClipTimeline();
+    updateMarksCountBadge();
+  }
+  function togglePhotoInclude(it) {
+    const m = getMarks(it.id);
+    m.included = !m.included;
+    const badge = document.getElementById('t-inc-badge');
+    if (badge) badge.classList.toggle('on', m.included);
+    updateStillDurUI(it);
+    updateOrderPctUI(it);
+    updateMarksCountBadge();
+    saveMarks();
+  }
+  function clearNearestMark(it) {
+    const m = theater.marks.get(it.id);
+    if (!m) return false;
+    if (it.kind === 'photo') {
+      if (m.included) { m.included = false;
+        const b = document.getElementById('t-inc-badge');
+        if (b) b.classList.remove('on');
+        updateStillDurUI(it);
+    updateOrderPctUI(it);
+        updateMarksCountBadge();
+        saveMarks();
+        return true; }
+      return false;
+    }
+    const t = (theater.mediaEl && !isNaN(theater.mediaEl.currentTime))
+      ? theater.mediaEl.currentTime : 0;
+    // If a pending mark (in or out) is nearest, clear it first.
+    let best = -1, bestD = Infinity, kind = null;
+    if (m.pending) {
+      const d = Math.abs(m.pending.t - t);
+      if (d < bestD) { bestD = d; best = 0; kind = 'pending'; }
+    }
+    m.ranges.forEach((r, i) => {
+      // distance from t to the range: 0 if inside, else nearest edge distance
+      const d = (t >= r.in && t <= r.out)
+        ? 0
+        : Math.min(Math.abs(t - r.in), Math.abs(t - r.out));
+      if (d < bestD) { bestD = d; best = i; kind = 'range'; }
+    });
+    if (best < 0) return false;
+    if (kind === 'pending') m.pending = null;
+    else m.ranges.splice(best, 1);
+    updateClipTimeline();
+    updateMarksCountBadge();
+    if (kind === 'range') {
+      updateOrderPctUI(it);
+      saveMarks();
+    }
+    return true;
+  }
+  // Pending in-points now persist across clip navigation and theater
+  // sessions (each clip has its own pending, so in/out never span clips
+  // anyway). The pending is still not written to cookie — it's cleared
+  // on page reload, and pressing i again on the same clip cancels it.
+  function clearPendingOnLeave(_prevIt) { /* intentional no-op */ }
+  function clampToDur(it, t) {
+    const d = (theater.mediaEl && isFinite(theater.mediaEl.duration))
+      ? theater.mediaEl.duration : (it.duration || t);
+    return Math.max(0, Math.min(d || t, t));
+  }
+
+  // --- Still-dwell duration (global + per-still override) -------------
+  //
+  // Global default lives in theater.stillDur (seconds), persisted in
+  // localStorage. Per-still override lives in marks[id].dur — set via the
+  // theater badge input when a still is currently on stage, blank clears
+  // back to the global. Both are honored during cycle play; fast mode still
+  // caps at fastImageMs.
+  const GSD_KEY = MARKS_KEY + '_gsd';
+  function loadGlobalStillDur() {
+    try {
+      const v = parseFloat(localStorage.getItem(GSD_KEY));
+      if (isFinite(v) && v > 0) theater.stillDur = v;
+    } catch (_) {}
+  }
+  function saveGlobalStillDur() {
+    try { localStorage.setItem(GSD_KEY, String(theater.stillDur)); } catch (_) {}
+  }
+  function setGlobalStillDur(v) {
+    const n = parseFloat(v);
+    if (!isFinite(n) || n <= 0) return;
+    theater.stillDur = +n.toFixed(2);
+    saveGlobalStillDur();
+    document.querySelectorAll('[data-role="global-still-dur"]').forEach(el => {
+      if (parseFloat(el.value) !== theater.stillDur) el.value = String(theater.stillDur);
+    });
+    // Refresh the still-dur input placeholder if a still is on stage.
+    if (theater.active) {
+      const it = theater.playlist[theater.index];
+      if (it && it.kind === 'photo') updateStillDurUI(it);
+    }
+    // Global dwell feeds directly into the edit total for every included
+    // still without a per-still override.
+    updateEditTotals();
+    // Persist into the active edit slot too — different cuts can want
+    // different still pacing.
+    if (typeof upsertActiveSlot === 'function') upsertActiveSlot();
+  }
+  function stillDurationMs(it) {
+    if (theater.fast) return theater.fastImageMs;
+    const mk = theater.marks.get(it.id);
+    if (mk && mk.dur != null && isFinite(mk.dur) && mk.dur > 0) return mk.dur * 1000;
+    return theater.stillDur * 1000;
+  }
+  function updateStillDurUI(it) {
+    const wrap = document.getElementById('t-still-dur-wrap');
+    const inp  = document.getElementById('t-still-dur-input');
+    if (!wrap || !inp) return;
+    const mk = it && theater.marks.get(it.id);
+    const isIncStill = it && it.kind === 'photo' && mk && mk.included;
+    wrap.classList.toggle('on', !!isIncStill);
+    if (isIncStill) {
+      inp.value = (mk.dur != null) ? String(mk.dur) : '';
+      inp.placeholder = String(theater.stillDur);
+    }
+  }
+  // --- Per-clip playback-position override (0-100%) -------------------
+  //
+  // Optional. When set, cycle play uses this pct as the item's position
+  // in the final edit instead of chronological order. Later this can be
+  // recomputed off the rendered edit's real duration and re-saved so it
+  // "sticks", but for now it's just a user hint that reorders play.
+  function itemHasMarks(it) {
+    if (!it) return false;
+    const mk = theater.marks.get(it.id);
+    if (!mk) return false;
+    return !!(mk.included || (mk.ranges && mk.ranges.length));
+  }
+  function updateOrderPctUI(it) {
+    const wrap = document.getElementById('t-ord-wrap');
+    const inp  = document.getElementById('t-ord-input');
+    if (!wrap || !inp) return;
+    const showable = itemHasMarks(it);
+    wrap.classList.toggle('on', !!showable);
+    if (showable) {
+      const mk = theater.marks.get(it.id);
+      inp.value = (mk && mk.orderPct != null) ? String(mk.orderPct) : '';
+    }
+  }
+  function setOrderPct(it, raw) {
+    if (!it) return;
+    const mk = getMarks(it.id);
+    if (raw == null || String(raw).trim() === '') { delete mk.orderPct; }
+    else {
+      const v = parseFloat(raw);
+      if (!isFinite(v)) { delete mk.orderPct; return; }
+      mk.orderPct = Math.max(0, Math.min(100, +v.toFixed(2)));
+    }
+    saveMarks();
+  }
+
+  // --- Export marks to clipboard --------------------------------------
+  function buildMarksExport() {
+    const sorted = [...items].sort((a, b) => a._t - b._t);
+    const chronoIdx = new Map(sorted.map((it, i) => [it.id, i]));
+    // First pass: collect the marked items in chronological order so we
+    // can assign each a "natural" 0-100 rank across the marked set. The
+    // effective playback pct is the user's override if set, else natural.
+    const marked = [];
+    sorted.forEach(it => {
+      const mk = theater.marks.get(it.id);
+      if (!mk) return;
+      const hasRanges = mk.ranges && mk.ranges.length > 0;
+      const inc = !!mk.included;
+      if (!hasRanges && !inc) return;
+      marked.push({ it, mk, hasRanges, inc });
+    });
+    const nMarked = marked.length;
+    const out = {
+      title: manifest.title || 'event',
+      exported_at: new Date().toISOString(),
+      total_items: items.length,
+      global_still_duration_s: theater.stillDur,
+      marked: [],
+    };
+    marked.forEach((row, markedIdx) => {
+      const { it, mk, hasRanges, inc } = row;
+      const naturalPct = (nMarked <= 1) ? 0 : +((markedIdx / (nMarked - 1)) * 100).toFixed(2);
+      const effectivePct = (mk.orderPct != null && isFinite(mk.orderPct))
+        ? +mk.orderPct.toFixed(2) : naturalPct;
+      const entry = {
+        id: it.id,
+        order: chronoIdx.get(it.id),
+        marked_order: markedIdx,
+        natural_position_pct: naturalPct,
+        effective_position_pct: effectivePct,
+        order_pct: (mk.orderPct != null && isFinite(mk.orderPct))
+          ? +mk.orderPct.toFixed(2) : null,
+        kind: it.kind,
+        filename: it.orig_name,
+        src: it.src,
+        ts: it.ts,
+        device: it.device || null,
+      };
+      if (it.duration != null) entry.duration_s = it.duration;
+      if (hasRanges) {
+        entry.subclips = mk.ranges.map(r => ({
+          in: +r.in.toFixed(3), out: +r.out.toFixed(3),
+          length_s: +(r.out - r.in).toFixed(3),
+        }));
+      }
+      if (inc) {
+        entry.included = true;
+        entry.still_duration_s = (mk.dur != null) ? mk.dur : theater.stillDur;
+        if (mk.dur != null) entry.still_duration_override = true;
+      }
+      out.marked.push(entry);
+    });
+    // Add a second view: sorted by effective playback order so downstream
+    // tooling doesn't have to sort itself.
+    out.playback_order = out.marked
+      .map(e => ({ id: e.id, filename: e.filename, effective_position_pct: e.effective_position_pct }))
+      .sort((a, b) => a.effective_position_pct - b.effective_position_pct);
+    return out;
+  }
+  async function copyMarksToClipboard(btnEl) {
+    const json = JSON.stringify(buildMarksExport(), null, 2);
+    let ok = false;
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(json);
+        ok = true;
+      }
+    } catch (_) {}
+    if (!ok) {
+      // Fallback for insecure contexts / older Safari
+      const ta = document.createElement('textarea');
+      ta.value = json;
+      ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      try { ok = document.execCommand('copy'); } catch (_) {}
+      ta.remove();
+    }
+    if (btnEl) {
+      const orig = btnEl.textContent;
+      btnEl.classList.add('copied');
+      btnEl.textContent = ok
+        ? `✓ copied ${buildMarksExport().marked.length} item${buildMarksExport().marked.length === 1 ? '' : 's'}`
+        : '✕ copy failed';
+      setTimeout(() => {
+        btnEl.classList.remove('copied');
+        btnEl.textContent = orig;
+      }, 1600);
+    }
+    if (!ok) {
+      // last resort: prompt the user with the JSON so they can copy manually
+      window.prompt('copy the JSON below:', json);
+    }
+  }
+
+  // --- Scrubbing ------------------------------------------------------
+  function scrubBy(deltaSec) {
+    const m = theater.mediaEl;
+    if (!m || typeof m.currentTime !== 'number') return;
+    const dur = isFinite(m.duration) ? m.duration : null;
+    let nt = m.currentTime + deltaSec;
+    if (nt < 0) nt = 0;
+    if (dur != null && nt > dur) nt = dur;
+    try { m.currentTime = nt; } catch (_) {}
+    // Push the visuals immediately — currentTime setter fires 'seeked'
+    // async, so update our cursors synchronously so keyboard nav feels
+    // responsive even while paused.
+    const it = theater.playlist[theater.index];
+    if (it) {
+      updateTimelineCursor(it._t + nt * 1000);
+      updateClipCursor(nt);
+    }
+  }
+
+  // --- Waveform (best-effort) -----------------------------------------
+  const waveformCache = new Map();   // src -> Float32Array | null
+  const WAVE_BUCKETS = 800;
+  const WAVE_MAX_BYTES = 250 * 1024 * 1024;   // give up on huge sources
+
+  async function computeWaveformPeaks(src) {
+    if (waveformCache.has(src)) return waveformCache.get(src);
+    try {
+      const resp = await fetch(src, { cache: 'force-cache' });
+      if (!resp.ok) throw new Error('fetch');
+      const len = +resp.headers.get('content-length') || 0;
+      if (len && len > WAVE_MAX_BYTES) throw new Error('too big');
+      const buf = await resp.arrayBuffer();
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) throw new Error('no AC');
+      const ac = new AC();
+      const decoded = await new Promise((res, rej) => {
+        // decodeAudioData in Safari uses callback form; wrap.
+        const p = ac.decodeAudioData(buf, res, rej);
+        if (p && p.then) p.then(res, rej);
+      });
+      const ch0 = decoded.getChannelData(0);
+      const peaks = new Float32Array(WAVE_BUCKETS);
+      const step = ch0.length / WAVE_BUCKETS;
+      for (let i = 0; i < WAVE_BUCKETS; i++) {
+        let mx = 0;
+        const s = Math.floor(i * step);
+        const e = Math.min(ch0.length, Math.floor((i + 1) * step));
+        for (let j = s; j < e; j++) {
+          const v = Math.abs(ch0[j]);
+          if (v > mx) mx = v;
+        }
+        peaks[i] = mx;
+      }
+      try { ac.close(); } catch (_) {}
+      waveformCache.set(src, peaks);
+      return peaks;
+    } catch (e) {
+      waveformCache.set(src, null);
+      return null;
+    }
+  }
+
+  function drawWaveformInto(canvas, peaks) {
+    const dpr = window.devicePixelRatio || 1;
+    const cssW = canvas.clientWidth, cssH = canvas.clientHeight;
+    canvas.width = Math.max(1, Math.floor(cssW * dpr));
+    canvas.height = Math.max(1, Math.floor(cssH * dpr));
+    const c = canvas.getContext('2d');
+    c.clearRect(0, 0, canvas.width, canvas.height);
+    if (!peaks || !peaks.length) return;
+    c.fillStyle = 'rgba(255,255,255,.35)';
+    const w = canvas.width, h = canvas.height, midY = h / 2;
+    const bucketW = w / peaks.length;
+    for (let i = 0; i < peaks.length; i++) {
+      const amp = Math.min(1, peaks[i]);
+      const barH = Math.max(1, amp * (h - 2));
+      c.fillRect(i * bucketW, midY - barH / 2, Math.max(1, bucketW - 0.5), barH);
+    }
+  }
 
   function computeTheaterPlaylist() {
     const pl = itemsPassingFilter().sort((a, b) => a._t - b._t);
@@ -1217,9 +2702,11 @@
     buildTheaterTimeline();
     showItem(0);
     updatePlayBtn(); updateFastBtn(); updateMuteBtn();
+    updateMarksCountBadge();
   }
 
   function exitTheater() {
+    stopCycle();
     theater.active = false;
     theater.playing = false;
     stopAdvanceTimers(); stopCursorRAF();
@@ -1229,7 +2716,7 @@
     document.getElementById('theater').classList.remove('active');
     document.getElementById('theater').classList.remove('autoplay-blocked');
     const stage = document.getElementById('theater-stage');
-    stage.querySelectorAll('.stage-media, .audio-holder').forEach(n => n.remove());
+    stage.querySelectorAll('.stage-media, .audio-holder, .clip-timeline').forEach(n => n.remove());
     theater.mediaEl = null;
   }
 
@@ -1365,12 +2852,199 @@
     });
   }
   function fmtCoords(lat, lon) { return `${lat.toFixed(5)}, ${lon.toFixed(5)}`; }
+  function fmtSec(s) {
+    if (s == null || !isFinite(s)) return '0:00';
+    const sign = s < 0 ? '-' : ''; s = Math.abs(s);
+    const m = Math.floor(s / 60), r = s - m * 60;
+    return `${sign}${m}:${r.toFixed(2).padStart(5, '0')}`;
+  }
+
+  // -- Clip timeline (per-video waveform + in/out marks + playhead) ----
+  function buildClipTimeline(it) {
+    const stage = document.getElementById('theater-stage');
+    stage.querySelectorAll('.clip-timeline').forEach(n => n.remove());
+    if (it.kind === 'photo') return;   // stills use the include badge
+    const el = document.createElement('div');
+    el.className = 'clip-timeline';
+    el.innerHTML = `
+      <div class="ct-meta">
+        <span class="ct-time" data-role="time">0:00.00</span>
+        <span class="ct-dur" data-role="dur">/ ${fmtSec(it.duration || 0)}</span>
+        <span class="ct-hint">i / o mark · ← → scrub (shift=fine) · ⌘← ⌘→ clip · esc clear</span>
+      </div>
+      <div class="ct-track" data-role="track">
+        <canvas data-role="wave"></canvas>
+      </div>`;
+    stage.appendChild(el);
+    // click-to-seek on the track
+    const track = el.querySelector('[data-role="track"]');
+    track.addEventListener('click', e => {
+      const m = theater.mediaEl;
+      const dur = (m && isFinite(m.duration))
+        ? m.duration : (it.duration || 0);
+      if (!dur) return;
+      const rect = track.getBoundingClientRect();
+      const frac = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+      try { if (m) m.currentTime = frac * dur; } catch(_){}
+      updateClipCursor(frac * dur);
+      updateTimelineCursor(it._t + frac * dur * 1000);
+    });
+    // draw waveform (async, best-effort)
+    const canvas = el.querySelector('[data-role="wave"]');
+    requestAnimationFrame(async () => {
+      const peaks = await computeWaveformPeaks(it.src);
+      // Guard: item may have changed while we awaited the decode.
+      if (theater.playlist[theater.index] !== it) return;
+      drawWaveformInto(canvas, peaks);
+    });
+    updateClipTimeline();
+  }
+
+  function updateClipTimeline() {
+    const el = document.querySelector('#theater .clip-timeline');
+    if (!el) return;
+    const track = el.querySelector('[data-role="track"]');
+    if (!track) return;
+    const it = theater.playlist[theater.index];
+    if (!it) return;
+    const m = theater.mediaEl;
+    const dur = (m && isFinite(m.duration))
+      ? m.duration : (it.duration || 0);
+    // Wipe & rebuild overlays (ranges / marks / playhead)
+    track.querySelectorAll('.ct-range, .ct-mark, .ct-playhead').forEach(n => n.remove());
+    if (!dur) return;
+    const mk = theater.marks.get(it.id);
+    if (mk) {
+      (mk.ranges || []).forEach((r, i) => {
+        const b = document.createElement('div');
+        b.className = 'ct-range';
+        b.style.left = ((r.in / dur) * 100) + '%';
+        b.style.width = (((r.out - r.in) / dur) * 100) + '%';
+        b.title = `sub-clip ${i + 1}: ${fmtSec(r.in)} → ${fmtSec(r.out)}`;
+        track.appendChild(b);
+      });
+      if (mk.pending) {
+        const p = document.createElement('div');
+        p.className = 'ct-mark pending pending-' + mk.pending.kind;
+        p.style.left = ((mk.pending.t / dur) * 100) + '%';
+        p.innerHTML = `<span class="lbl">${mk.pending.kind} ${fmtSec(mk.pending.t)}</span>`;
+        track.appendChild(p);
+      }
+    }
+    const ph = document.createElement('div');
+    ph.className = 'ct-playhead';
+    ph.style.left = (((m ? m.currentTime : 0) / dur) * 100) + '%';
+    track.appendChild(ph);
+    const timeEl = el.querySelector('[data-role="time"]');
+    if (timeEl && m) timeEl.textContent = fmtSec(m.currentTime || 0);
+  }
+
+  function updateClipCursor(sec) {
+    const el = document.querySelector('#theater .clip-timeline');
+    if (!el) return;
+    const it = theater.playlist[theater.index];
+    if (!it) return;
+    const m = theater.mediaEl;
+    const dur = (m && isFinite(m.duration))
+      ? m.duration : (it.duration || 0);
+    if (!dur) return;
+    const ph = el.querySelector('.ct-playhead');
+    if (ph) ph.style.left = ((sec / dur) * 100) + '%';
+    const timeEl = el.querySelector('[data-role="time"]');
+    if (timeEl) timeEl.textContent = fmtSec(sec);
+  }
+
+  // --- Cycle-play through marked sub-clips ----------------------------
+  function buildCycleQueue() {
+    // First pass: raw queue in natural (chronological + in-time) order.
+    const raw = [];
+    theater.playlist.forEach(it => {
+      const m = theater.marks.get(it.id);
+      if (!m) return;
+      const pct = (m.orderPct != null && isFinite(m.orderPct)) ? m.orderPct : null;
+      if (it.kind === 'photo') {
+        if (m.included) raw.push({ itemId: it.id, kind: 'photo', _override: pct });
+      } else {
+        (m.ranges || []).forEach(r => {
+          raw.push({
+            itemId: it.id, kind: it.kind,
+            in: r.in, out: r.out, _override: pct,
+          });
+        });
+      }
+    });
+    const n = raw.length;
+    if (!n) return raw;
+    // Assign a natural 0-100 position based on chronological insertion order.
+    raw.forEach((e, i) => {
+      e._natural = (n === 1) ? 0 : (i / (n - 1)) * 100;
+      e._effective = (e._override != null) ? e._override : e._natural;
+    });
+    // Stable sort by effective pct — same-item ranges keep their in-time
+    // relative order because they share the same _effective.
+    raw.sort((a, b) => a._effective - b._effective);
+    return raw;
+  }
+  function startCycle() {
+    const q = buildCycleQueue();
+    if (!q.length) {
+      alert('no sub-clips marked — press "i" (and "o" for video/audio) on items first');
+      return;
+    }
+    theater.cycleMode = true;
+    theater.cycleQueue = q;
+    theater.cycleIdx = 0;
+    theater.playing = true;
+    document.getElementById('theater').classList.add('cycle-mode');
+    updatePlayBtn();
+    playCycleEntry(0);
+  }
+  function stopCycle() {
+    theater.cycleMode = false;
+    theater.cycleQueue = [];
+    theater.cycleIdx = 0;
+    if (theater.subclipEndTimer) {
+      clearTimeout(theater.subclipEndTimer);
+      theater.subclipEndTimer = null;
+    }
+    document.getElementById('theater').classList.remove('cycle-mode');
+  }
+  function playCycleEntry(i) {
+    if (theater.subclipEndTimer) {
+      clearTimeout(theater.subclipEndTimer);
+      theater.subclipEndTimer = null;
+    }
+    const q = theater.cycleQueue;
+    if (!q.length) { stopCycle(); return; }
+    i = ((i % q.length) + q.length) % q.length;
+    theater.cycleIdx = i;
+    const ent = q[i];
+    const targetIdx = theater.playlist.findIndex(x => x.id === ent.itemId);
+    if (targetIdx < 0) { advanceCycle(); return; }
+    // showItem handles rendering; startPlayback will honor cycleMode.
+    showItem(targetIdx);
+  }
+  function advanceCycle() {
+    playCycleEntry(theater.cycleIdx + 1);
+  }
+  function currentCycleEntry() {
+    if (!theater.cycleMode) return null;
+    return theater.cycleQueue[theater.cycleIdx] || null;
+  }
 
   function showItem(i) {
     stopAdvanceTimers(); stopCursorRAF();
+    if (theater.subclipEndTimer) {
+      clearTimeout(theater.subclipEndTimer);
+      theater.subclipEndTimer = null;
+    }
     const n = theater.playlist.length;
     if (!n) return;
     i = ((i % n) + n) % n;
+    // Dangling in-point on the previous clip is intentionally preserved
+    // (each clip has its own pending; in/out never span clips). Redoing
+    // an in-press after a nav round-trip would be worse than the small
+    // cost of a stale pending, which the user can clear with another i.
     theater.index = i;
     const it = theater.playlist[i];
     const clusterIdx = theater.clusterOf.get(it.id);
@@ -1403,12 +3077,9 @@
       media.poster = it.thumb;
       stage.appendChild(media);
       media.addEventListener('ended', () => {
-        if (theater.active && theater.playing) showItem(theater.index + 1);
-      });
-      media.addEventListener('loadedmetadata', () => {
-        if (theater.fast && media.duration && isFinite(media.duration)) {
-          try { media.currentTime = media.duration * theater.videoStartFrac; } catch(_){}
-        }
+        if (!theater.active || !theater.playing) return;
+        if (theater.cycleMode) advanceCycle();
+        else showItem(theater.index + 1);
       });
     } else {
       const wrap = document.createElement('div');
@@ -1423,7 +3094,9 @@
       wrap.appendChild(media);
       stage.appendChild(wrap);
       media.addEventListener('ended', () => {
-        if (theater.active && theater.playing) showItem(theater.index + 1);
+        if (!theater.active || !theater.playing) return;
+        if (theater.cycleMode) advanceCycle();
+        else showItem(theater.index + 1);
       });
     }
     theater.mediaEl = media;
@@ -1437,22 +3110,57 @@
     document.getElementById('t-where').textContent =
       fmtCoords(it.lat, it.lon) + (it.gps_inferred ? ' ~' : '');
     document.getElementById('t-cam').textContent = it.device || '';
-
+    // included-still badge sync + per-still dwell override input
+    const incBadge = document.getElementById('t-inc-badge');
+    if (incBadge) {
+      const mk = theater.marks.get(it.id);
+      incBadge.classList.toggle('on', !!(mk && mk.included));
+    }
+    updateStillDurUI(it);
+    updateOrderPctUI(it);
+    // Per-clip timeline (waveform + marks + playhead) — videos + audios.
+    buildClipTimeline(it);
+    if (media && (media.tagName === 'VIDEO' || media.tagName === 'AUDIO')) {
+      const refresh = () => { updateClipTimeline(); };
+      media.addEventListener('loadedmetadata', refresh);
+      media.addEventListener('durationchange', refresh);
+      media.addEventListener('timeupdate', () => updateClipCursor(media.currentTime));
+      media.addEventListener('seeked', () => updateClipCursor(media.currentTime));
+    }
     if (theater.playing) startPlayback();
   }
 
   async function startPlayback() {
     const it = theater.playlist[theater.index];
     const m = theater.mediaEl;
+    const cyc = currentCycleEntry();
+    // Photos dwell for stillDurationMs(it) — per-still override wins, else
+    // the global; fast mode uses the fixed fastImageMs snippet cap.
     if (it.kind === 'photo') {
-      const dur = theater.fast ? theater.fastImageMs : theater.imageMs;
+      const dur = stillDurationMs(it);
       theater.imgTimer = setTimeout(() => {
-        if (theater.active && theater.playing) showItem(theater.index + 1);
+        if (!theater.active || !theater.playing) return;
+        if (theater.cycleMode) advanceCycle();
+        else showItem(theater.index + 1);
       }, dur);
       animateCursorLinear(it._t, dur / 1000);
       return;
     }
     if (!m) return;
+    const seekToInPoint = () => {
+      if (cyc && cyc.in != null) {
+        try { m.currentTime = cyc.in; } catch(_){}
+      } else if (theater.fast && it.kind === 'video'
+                 && m.duration && isFinite(m.duration)) {
+        try { m.currentTime = m.duration * theater.videoStartFrac; } catch(_){}
+      }
+    };
+    // If metadata already available, seek now; else queue on loadedmetadata.
+    if (m.readyState >= 1 && isFinite(m.duration) && m.duration > 0) {
+      seekToInPoint();
+    } else {
+      m.addEventListener('loadedmetadata', seekToInPoint, { once: true });
+    }
     try {
       await m.play();
       hideAutoplayHint();
@@ -1466,17 +3174,29 @@
         showAutoplayHint();
       }
     }
-    if (theater.fast && it.kind === 'video') {
+    // Cycle-mode: schedule advance at the out-point (poll currentTime so
+    // we advance even if the browser fires timeupdate coarsely near end).
+    if (cyc && cyc.out != null) {
+      const tick = () => {
+        if (!theater.active || !theater.playing || !theater.cycleMode) return;
+        if (m.currentTime >= cyc.out - 0.03) { advanceCycle(); return; }
+        theater.subclipEndTimer = setTimeout(tick, 50);
+      };
+      theater.subclipEndTimer = setTimeout(tick, 50);
+    } else if (theater.fast && it.kind === 'video') {
       theater.capTimer = setTimeout(() => {
-        if (theater.active && theater.playing) showItem(theater.index + 1);
+        if (!theater.active || !theater.playing) return;
+        if (theater.cycleMode) advanceCycle();
+        else showItem(theater.index + 1);
       }, theater.fastVideoMs);
     }
     // drive cursor from media time
     const start = it._t;
     const step = () => {
       if (!theater.active || !theater.playing) return;
-      const t = start + ((m.currentTime || 0) * 1000);
-      updateTimelineCursor(t);
+      const cur = m.currentTime || 0;
+      updateTimelineCursor(start + cur * 1000);
+      updateClipCursor(cur);
       theater.cursorRAF = requestAnimationFrame(step);
     };
     theater.cursorRAF = requestAnimationFrame(step);
@@ -1529,6 +3249,64 @@
 
   document.getElementById('theater-btn').addEventListener('click', enterTheater);
   document.getElementById('t-close').addEventListener('click', exitTheater);
+  document.getElementById('t-cycle').addEventListener('click', e => {
+    e.currentTarget.blur();
+    if (theater.cycleMode) { stopCycle(); }
+    else { startCycle(); }
+  });
+
+  // Global still-dwell inputs (sidebar + theater — kept in sync).
+  document.querySelectorAll('[data-role="global-still-dur"]').forEach(el => {
+    el.addEventListener('change', () => setGlobalStillDur(el.value));
+    // Enter commits without leaving focus context
+    el.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); el.blur(); }
+    });
+  });
+  // Per-still dwell override input (theater).
+  const tStillInp = document.getElementById('t-still-dur-input');
+  if (tStillInp) {
+    const commit = () => {
+      const it = theater.playlist[theater.index];
+      if (!it || it.kind !== 'photo') return;
+      const mk = getMarks(it.id);
+      const raw = tStillInp.value.trim();
+      if (!raw) { delete mk.dur; }
+      else {
+        const v = parseFloat(raw);
+        if (!isFinite(v) || v <= 0) { delete mk.dur; tStillInp.value = ''; }
+        else mk.dur = +v.toFixed(2);
+      }
+      saveMarks();
+      updateEditTotals();
+    };
+    tStillInp.addEventListener('change', commit);
+    tStillInp.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); tStillInp.blur(); }
+    });
+  }
+  // Per-clip position override (0-100%).
+  const tOrdInp = document.getElementById('t-ord-input');
+  if (tOrdInp) {
+    tOrdInp.addEventListener('change', () => {
+      const it = theater.playlist[theater.index];
+      if (!it) return;
+      setOrderPct(it, tOrdInp.value);
+      updateOrderPctUI(it);
+    });
+    tOrdInp.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); tOrdInp.blur(); }
+    });
+  }
+  // Export buttons (sidebar + theater).
+  document.getElementById('export-btn').addEventListener('click', e => {
+    e.currentTarget.blur();
+    copyMarksToClipboard(e.currentTarget);
+  });
+  document.getElementById('t-export').addEventListener('click', e => {
+    e.currentTarget.blur();
+    copyMarksToClipboard(e.currentTarget);
+  });
   document.getElementById('t-prev').addEventListener('click', e => {
     e.currentTarget.blur();
     showItem(theater.index - 1);
@@ -1565,7 +3343,47 @@
     }
   });
 
+  // ------------------------------------------------------------ Drawer
+  // A right-edge settings drawer. Collapsed → only the vertical tab
+  // shows; click the tab (or ✕) to toggle. Open/closed state persisted
+  // globally (not per-event) so muscle memory sticks across events.
+  (function setupDrawer() {
+    const DRAWER_KEY = 'evmk_drawer_open';
+    const drawer = document.getElementById('drawer');
+    const toggle = (open) => {
+      const nextOpen = (open == null) ? drawer.classList.contains('collapsed') : open;
+      drawer.classList.toggle('collapsed', !nextOpen);
+      try { localStorage.setItem(DRAWER_KEY, nextOpen ? '1' : '0'); } catch (_) {}
+    };
+    try {
+      if (localStorage.getItem(DRAWER_KEY) === '1') drawer.classList.remove('collapsed');
+    } catch (_) {}
+    document.getElementById('drawer-tab').addEventListener('click', () => toggle());
+    document.getElementById('drawer-close').addEventListener('click', () => toggle(false));
+    // Esc closes the drawer when it has focus / theater isn't active.
+    window.addEventListener('keydown', e => {
+      if (e.key !== 'Escape') return;
+      if (theater.active) return;   // theater has its own Esc handling
+      if (drawer.classList.contains('collapsed')) return;
+      const t = e.target;
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) return;
+      if (drawer.contains(t) || t === document.body) {
+        e.preventDefault(); toggle(false);
+      }
+    });
+  })();
+
   // ------------------------------------------------------------ Init
+  loadMarks();            // restore legacy marks (may migrate into edits)
+  loadGlobalStillDur();   // restore global still-dwell (localStorage)
+  initEditsAtBootstrap(); // picks target edit (URL / active / autosave)
+                          // and overwrites the two above where relevant
+  // Sync any UI inputs so they show the loaded value on first paint.
+  document.querySelectorAll('[data-role="global-still-dur"]').forEach(el => {
+    el.value = String(theater.stillDur);
+  });
+  updateEditTotals();     // render the edit-length readout on first paint
+  updateSourceTotals();   // source stats are static once items are loaded
   renderDevices();
   buildTimeline();
   refreshMap();
@@ -1583,10 +3401,53 @@
     const t = e.target;
     if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
     if (theater.active) {
-      if (e.key === 'Escape')       { e.preventDefault(); exitTheater(); return; }
-      if (e.key === ' ')            { e.preventDefault(); togglePlay(); return; }
-      if (e.key === 'ArrowLeft')    { e.preventDefault(); showItem(theater.index - 1); return; }
-      if (e.key === 'ArrowRight')   { e.preventDefault(); showItem(theater.index + 1); return; }
+      const it = theater.playlist[theater.index];
+      const isPhoto = it && it.kind === 'photo';
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        // Clear the nearest sub-clip / included-still on the current item.
+        // Two escs in a row (nothing left to clear) exit the theater — so
+        // esc still gives you a way out, but never *accidentally* on the
+        // first press if there was a mark to remove.
+        if (!it || !clearNearestMark(it)) exitTheater();
+        return;
+      }
+      if (e.key === ' ') { e.preventDefault(); togglePlay(); return; }
+      if (e.key === 'i' || e.key === 'I') {
+        e.preventDefault();
+        if (!it) return;
+        if (isPhoto) togglePhotoInclude(it);
+        else {
+          const cur = theater.mediaEl ? (theater.mediaEl.currentTime || 0) : 0;
+          markIn(it, cur);
+        }
+        return;
+      }
+      if (e.key === 'o' || e.key === 'O') {
+        e.preventDefault();
+        if (!it || isPhoto) return;
+        const cur = theater.mediaEl ? (theater.mediaEl.currentTime || 0) : 0;
+        markOut(it, cur);
+        return;
+      }
+      if (e.key === 'c' || e.key === 'C') {
+        e.preventDefault();
+        if (theater.cycleMode) stopCycle();
+        else startCycle();
+        return;
+      }
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+        e.preventDefault();
+        const dir = e.key === 'ArrowRight' ? +1 : -1;
+        // ⌘/Ctrl navigates between clips (previous behaviour).
+        if (e.metaKey || e.ctrlKey) { showItem(theater.index + dir); return; }
+        // Photos have no timeline — arrows still walk clips.
+        if (isPhoto) { showItem(theater.index + dir); return; }
+        // Otherwise scrub within the current clip. Shift = fine.
+        const stepSec = e.shiftKey ? 0.1 : 1.0;
+        scrubBy(dir * stepSec);
+        return;
+      }
       if (e.key === 'f' || e.key === 'F') {
         theater.fast = !theater.fast; updateFastBtn();
         showItem(theater.index); return;
@@ -1615,6 +3476,14 @@
       updateTimelineActive(theater.playlist[theater.index]?.id);
       updateTimelineCursor(theater.playlist[theater.index]?._t);
       if (theaterMap) theaterMap.invalidateSize();
+      // Re-render clip timeline waveform at new size (peaks cached).
+      const it = theater.playlist[theater.index];
+      const cv = document.querySelector('#theater .clip-timeline canvas');
+      if (it && cv) {
+        const peaks = waveformCache.get(it.src);
+        drawWaveformInto(cv, peaks || null);
+      }
+      updateClipTimeline();
     }
   });
 })();
