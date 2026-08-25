@@ -64,22 +64,83 @@
   .btn:hover { border-color: var(--accent); }
   .sidebar-body { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
 
-  .devices { padding: 10px 14px; border-bottom: 1px solid var(--border); }
-  .devices h2 {
-    margin: 0 0 6px; font-size: 11px; text-transform: uppercase;
-    letter-spacing: .04em; color: var(--muted); font-weight: 600;
+  .devices { border-bottom: 1px solid var(--border); }
+  .devices-hdr {
+    display: flex; align-items: center; gap: 6px;
+    padding: 10px 14px 6px;
   }
+  .devices-toggle {
+    background: none; border: none; color: var(--muted);
+    font: inherit; font-size: 11px; text-transform: uppercase;
+    letter-spacing: .04em; font-weight: 600;
+    padding: 0; cursor: pointer; flex: 1; text-align: left;
+    display: flex; align-items: center; gap: 6px;
+    min-height: 22px;
+  }
+  .devices-toggle:hover { color: var(--text); }
+  .devices-toggle .chev {
+    display: inline-block; width: 10px;
+    transition: transform .15s;
+  }
+  .devices-count {
+    color: var(--muted); font-weight: 400; text-transform: none;
+    letter-spacing: 0; font-size: 11px; margin-left: 2px;
+  }
+  .devices-body {
+    padding: 0 14px 10px;
+    overflow: hidden;
+  }
+  .devices-body.collapsed { display: none; }
   .device-row {
     display: flex; align-items: center; gap: 8px; padding: 6px 0;
-    cursor: pointer; user-select: none;
+    user-select: none;
   }
   .device-row .swatch {
     width: 14px; height: 14px; border-radius: 50%;
     flex-shrink: 0; border: 2px solid rgba(255,255,255,.15);
+    cursor: pointer;
   }
-  .device-row .name { flex: 1; font-size: 13px; }
-  .device-row .n { color: var(--muted); font-size: 12px; }
-  .device-row.off { opacity: .35; }
+  .device-row .name {
+    flex: 1; font-size: 13px; line-height: 1.25; cursor: pointer;
+    min-width: 0;
+  }
+  .device-row .name .cam {
+    color: var(--muted); font-size: 11px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .device-row .n {
+    color: var(--muted); font-size: 12px; white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+  .device-row.off .swatch { border-style: dashed; }
+  /* Fade only the identity cells (swatch/name/count) when a row is off
+     or has zero items currently in view — keep the action buttons at
+     full opacity so they stay visible & clickable. */
+  .device-row.off > .swatch,
+  .device-row.off > .name,
+  .device-row.off > .n { opacity: .45; }
+  .device-row.fade > .swatch,
+  .device-row.fade > .name,
+  .device-row.fade > .n { opacity: .6; }
+  .dev-actions {
+    display: flex; align-items: center; gap: 4px;
+  }
+  .dev-btn {
+    background: var(--panel-2); color: var(--muted);
+    border: 1px solid var(--border); border-radius: 4px;
+    padding: 3px 7px; font: inherit; font-size: 11px;
+    cursor: pointer; min-height: 22px; line-height: 1;
+    transition: color .12s, border-color .12s, background .12s;
+  }
+  .dev-btn:hover {
+    color: var(--text); border-color: var(--accent);
+    background: rgba(75,123,236,.10);
+  }
+  .dev-btn.active {
+    color: var(--text); border-color: var(--accent);
+    background: rgba(75,123,236,.18);
+  }
+  .devices-hdr .dev-btn { font-size: 10px; padding: 2px 6px; }
 
   .item-list { padding: 4px 0; }
   .item-row {
@@ -222,6 +283,8 @@
     .row-head { padding: 12px 14px; }
     .row-head .thumb { width: 74px; height: 50px; }
     #timeline .dot { width: 12px; height: 12px; }
+    .dev-actions { opacity: 1; }
+    .dev-btn { min-height: 28px; padding: 4px 8px; }
   }
 </style>
 </head>
@@ -277,6 +340,7 @@
     expandedId: null,     // id of the row expanded inline
     currentList: [],      // last-rendered list (scope for prev/next & selection band)
     initialFit: true,
+    devicesCollapsed: false,
   };
 
   // ------------------------------------------------------------------ Map
@@ -458,6 +522,8 @@
     }
     renderList();
     updateSelectionBand();
+    // In-view counts / fade on device rows must track zoom + pan + brush.
+    renderDevices();
   }
   function scheduleListRefresh() {
     clearTimeout(listRefreshTimer);
@@ -646,28 +712,134 @@
   });
 
   // ------------------------------------------------------------ Devices
+  //
+  // The devices panel is collapsible (default open) and each row exposes
+  // three controls:
+  //   • the row body (swatch/name)  → toggle include/exclude
+  //   • the "only" pill             → set active-set to this device alone
+  //                                   and fit the map to its items
+  //   • the ✓/✕ pill                → same as row-body toggle
+  //
+  // Counts show "in-view / total"; a device with zero items currently in
+  // view (map bounds ∩ time brush) fades to signal it's inactive right
+  // now even if it's still in the active-set.  Excluded devices are
+  // never rendered on the map or in the sidebar list (that's the
+  // existing behaviour of passesFilter/refreshMap — this just keeps the
+  // device panel honest about it, and re-runs the counts on every
+  // moveend so zoom-ins stay in sync.
   function renderDevices() {
-    const counts = {};
-    items.forEach(it => counts[it.device] = (counts[it.device] || 0) + 1);
-    const dev = document.getElementById('devices');
-    dev.innerHTML = `<h2>devices</h2>` + manifest.devices.map(d => `
-      <div class="device-row ${state.activeDevices.has(d.key) ? '' : 'off'}"
-           data-key="${d.key}">
-        <div class="swatch" style="background:${d.color}"></div>
-        <div class="name">${d.key || 'unknown'}</div>
-        <div class="n">${counts[d.key] || 0}</div>
-      </div>`).join('');
-    dev.querySelectorAll('.device-row').forEach(r => r.onclick = () => {
-      const k = r.dataset.key;
-      if (state.activeDevices.has(k)) state.activeDevices.delete(k);
-      else state.activeDevices.add(k);
-      renderDevices();
-      refreshMap();
-      // fit map to remaining, then moveend updates the list
-      const pass = itemsPassingFilter();
-      if (pass.length) map.flyToBounds(L.latLngBounds(pass.map(i => [i.lat, i.lon])).pad(0.15), { duration: 0.4 });
-      else refreshList();
+    const totalCounts = {};
+    const byDevice = {};
+    items.forEach(it => {
+      totalCounts[it.device] = (totalCounts[it.device] || 0) + 1;
+      if (!byDevice[it.device]) byDevice[it.device] = it;
     });
+    // In-view for the count column ignores whether the device itself is
+    // currently active — otherwise unchecking a device would zero its own
+    // count and the user couldn't see what they'd be unhiding.
+    const b = map.getBounds();
+    const inViewCounts = {};
+    items.forEach(it => {
+      if (state.brush) {
+        const lo = Math.min(state.brush.a, state.brush.b);
+        const hi = Math.max(state.brush.a, state.brush.b);
+        if (it._t < lo || it._t > hi) return;
+      }
+      if (!b.contains([it.lat, it.lon])) return;
+      inViewCounts[it.device] = (inViewCounts[it.device] || 0) + 1;
+    });
+
+    const dev = document.getElementById('devices');
+    const collapsed = state.devicesCollapsed;
+    const activeCount = manifest.devices.filter(d => state.activeDevices.has(d.key)).length;
+    const totalDevices = manifest.devices.length;
+    const allActive = activeCount === totalDevices;
+
+    const rowsHtml = manifest.devices.map(d => {
+      const sample = byDevice[d.key] || {};
+      const author = sample.author;
+      const camera = sample.camera || d.key || 'unknown';
+      const nameHtml = author
+        ? `<div class="name" data-act="toggle"><b>${author}</b><div class="cam">${camera}</div></div>`
+        : `<div class="name" data-act="toggle">${camera}</div>`;
+      const isActive = state.activeDevices.has(d.key);
+      const inViewN = inViewCounts[d.key] || 0;
+      const totalN = totalCounts[d.key] || 0;
+      const countHtml = isActive && inViewN !== totalN
+        ? `<span style="color:var(--text)">${inViewN}</span><span>/${totalN}</span>`
+        : `${totalN}`;
+      const soloActive = isActive && activeCount === 1;
+      const fadeClass = isActive && inViewN === 0 ? 'fade' : '';
+      return `
+        <div class="device-row ${isActive ? '' : 'off'} ${fadeClass}" data-key="${d.key}">
+          <div class="swatch" style="background:${d.color}" data-act="toggle"></div>
+          ${nameHtml}
+          <div class="n" data-act="toggle" title="${inViewN} in view / ${totalN} total">${countHtml}</div>
+          <div class="dev-actions">
+            <button class="dev-btn ${soloActive ? 'active' : ''}" data-act="only"
+              title="show only this device">only</button>
+            <button class="dev-btn" data-act="toggle"
+              title="${isActive ? 'hide' : 'show'} this device">${isActive ? '✕' : '✓'}</button>
+          </div>
+        </div>`;
+    }).join('');
+
+    dev.innerHTML = `
+      <div class="devices-hdr">
+        <button class="devices-toggle" data-act="collapse"
+          title="${collapsed ? 'expand' : 'collapse'} devices">
+          <span class="chev">${collapsed ? '▸' : '▾'}</span>
+          devices <span class="devices-count">${activeCount}/${totalDevices}</span>
+        </button>
+        <button class="dev-btn ${allActive ? 'active' : ''}" data-act="all"
+          title="include every device">all</button>
+      </div>
+      <div class="devices-body ${collapsed ? 'collapsed' : ''}">
+        ${rowsHtml}
+      </div>`;
+
+    dev.querySelector('[data-act="collapse"]').onclick = () => {
+      state.devicesCollapsed = !state.devicesCollapsed;
+      renderDevices();
+    };
+    dev.querySelector('[data-act="all"]').onclick = e => {
+      e.stopPropagation();
+      state.activeDevices = new Set(manifest.devices.map(x => x.key));
+      applyDeviceFilterChange();
+    };
+    dev.querySelectorAll('.device-row').forEach(r => {
+      const k = r.dataset.key;
+      const toggle = () => {
+        if (state.activeDevices.has(k)) state.activeDevices.delete(k);
+        else state.activeDevices.add(k);
+        applyDeviceFilterChange();
+      };
+      r.querySelectorAll('[data-act="toggle"]').forEach(el =>
+        el.addEventListener('click', e => { e.stopPropagation(); toggle(); }));
+      r.querySelector('[data-act="only"]').addEventListener('click', e => {
+        e.stopPropagation();
+        // toggle "only": if already isolated to this device, restore all
+        const soloActive = state.activeDevices.has(k) && state.activeDevices.size === 1;
+        state.activeDevices = soloActive
+          ? new Set(manifest.devices.map(x => x.key))
+          : new Set([k]);
+        applyDeviceFilterChange(soloActive ? null : k);
+      });
+    });
+  }
+
+  function applyDeviceFilterChange(fitKey) {
+    renderDevices();
+    refreshMap();
+    const pass = itemsPassingFilter();
+    if (pass.length) {
+      const focus = fitKey ? pass.filter(i => i.device === fitKey) : pass;
+      const src = focus.length ? focus : pass;
+      map.flyToBounds(L.latLngBounds(src.map(i => [i.lat, i.lon])).pad(0.15),
+        { duration: 0.4 });
+    } else {
+      refreshList();
+    }
   }
 
   // ------------------------------------------------------------ Timeline
