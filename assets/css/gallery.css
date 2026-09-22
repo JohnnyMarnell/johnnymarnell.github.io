@@ -132,6 +132,10 @@
 
 .tile:hover .tile__badge svg { transform: scale(1.12); }
 
+/* The media box is only ~47% of a portrait tile's width, so the same
+   percentage would make the badge swamp it. */
+.tile[data-orientation="portrait"] .tile__badge svg { width: clamp(30px, 11%, 46px); }
+
 .tile__duration {
   position: absolute;
   right: 6px;
@@ -151,13 +155,15 @@
   z-index: 9999;
   display: grid;
   grid-template-rows: 1fr;
-  background: rgb(6 6 8 / 97%);
+  background: #060608;
   overscroll-behavior: contain;
 }
 
 .lightbox[hidden] { display: none; }
 
 .lightbox__stage {
+  --stage-h: 100dvh;
+
   position: relative;
   display: grid;
   place-items: center;
@@ -167,13 +173,24 @@
 }
 
 @media (min-width: 768px) {
-  .lightbox__stage { padding: 56px 72px; }
+  .lightbox__stage { padding: 56px 72px; --stage-h: calc(100dvh - 112px); }
 }
 
+/*
+ * Sized explicitly rather than left to `auto`. Every child of the slide is
+ * absolutely positioned, so with `width: auto` inside a centred grid item it
+ * shrink-wraps to nothing and the slide collapses — which reads as "the video
+ * is tiny" and, because the poster is then 0x0, as "the poster is missing".
+ *
+ * `--aspect` is a bare `W / H`, so it substitutes textually into both
+ * `aspect-ratio` and the calc below: width is the full stage unless the
+ * resulting height would not fit, in which case height governs. That is what
+ * makes a 9:16 video fill a phone instead of sitting at a fixed 640x1138.
+ */
 .lightbox__slide {
   position: relative;
   aspect-ratio: var(--aspect, 16 / 9);
-  width: auto;
+  width: min(100%, calc(var(--stage-h) * var(--aspect, 16 / 9)));
   height: auto;
   max-width: 100%;
   max-height: 100%;
@@ -244,6 +261,14 @@
 
 .lightbox__slide[data-state="stalled"] .lightbox__fallback,
 .lightbox__slide[data-state="error"] .lightbox__fallback { display: block; }
+
+.lightbox__note {
+  margin: 0 0 10px;
+  color: rgb(255 255 255 / 85%);
+  font: 400 14px/1.4 system-ui, sans-serif;
+}
+
+.lightbox__note:empty { display: none; }
 
 .lightbox__fallback a {
   display: inline-block;

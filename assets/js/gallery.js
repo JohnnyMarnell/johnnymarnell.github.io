@@ -16,6 +16,15 @@
 (() => {
   "use strict";
 
+  // YouTube IFrame API error codes, which are otherwise opaque to a visitor.
+  const YT_ERRORS = {
+    2: "That video link looks wrong.",
+    5: "This video can't play in this browser.",
+    100: "This video has been removed or made private.",
+    101: "The owner doesn't allow this video to be embedded.",
+    150: "The owner doesn't allow this video to be embedded.",
+  };
+
   const PLAY_RETRY_MUTED_MS = 2000; // unmuted autoplay refused -> retry muted
   const WATCHDOG_MS = 6000; // still not playing -> stop spinning, offer YouTube
   const SWIPE_PX = 40;
@@ -71,7 +80,10 @@
         <img class="lightbox__poster" data-poster alt="">
         <div class="lightbox__player" data-player><div data-mount></div></div>
         <div class="lightbox__spinner" data-spinner></div>
-        <div class="lightbox__fallback" data-fallback><a data-fallback-link target="_blank" rel="noopener">Watch on YouTube</a></div>
+        <div class="lightbox__fallback" data-fallback>
+          <p class="lightbox__note" data-fallback-note></p>
+          <a data-fallback-link target="_blank" rel="noopener">Watch on YouTube</a>
+        </div>
       </div>
       <button class="lightbox__btn lightbox__nav" data-action="prev" data-nav aria-label="Previous">${ICONS.prev}</button>
       <button class="lightbox__btn lightbox__nav" data-action="next" data-nav aria-label="Next">${ICONS.next}</button>
@@ -95,8 +107,10 @@
   const counter = $("[data-counter]");
   const caption = $("[data-caption]");
   const unmuteBtn = $('[data-action="unmute"]');
+  const fallbackNote = $("[data-fallback-note]");
 
   let index = -1;
+  let generation = 0; // bumped per slide, so a slow API resolve can't mount late
   let player = null;
   let ready = false;
   let opener = null;
@@ -139,9 +153,11 @@
   }
 
   function mountVideo(item) {
+    const mine = generation;
     youtubeApi().then(
       (YT) => {
-        if (state() === "closed") return;
+        // The visitor may have swiped on, or closed, while the API loaded.
+        if (mine !== generation) return;
         player = new YT.Player($("[data-mount]"), {
           videoId: item.youtube,
           host: "https://www.youtube-nocookie.com",
@@ -168,7 +184,11 @@
                 syncMuteButton();
               }
             },
-            onError: () => { clearTimers(); setState("error"); },
+            onError: ({ data }) => {
+              clearTimers();
+              fallbackNote.textContent = YT_ERRORS[data] || "This video failed to load.";
+              setState("error");
+            },
           },
         });
 
@@ -181,9 +201,17 @@
         }, PLAY_RETRY_MUTED_MS);
 
         // The spinner is never allowed to outlive this.
-        later(() => { if (state() !== "playing") setState("stalled"); }, WATCHDOG_MS);
+        later(() => {
+          if (state() === "playing") return;
+          fallbackNote.textContent = "This is taking longer than it should.";
+          setState("stalled");
+        }, WATCHDOG_MS);
       },
-      () => setState("stalled"),
+      () => {
+        if (mine !== generation) return;
+        fallbackNote.textContent = "Couldn't reach YouTube.";
+        setState("stalled");
+      },
     );
   }
 
@@ -198,6 +226,7 @@
   function show(i) {
     index = (i + tiles.length) % tiles.length;
     const item = describe(tiles[index]);
+    generation += 1;
     teardownPlayer();
 
     slide.style.setProperty("--aspect", item.aspect);
@@ -212,6 +241,7 @@
 
     caption.textContent = item.caption;
     counter.textContent = `${index + 1} / ${tiles.length}`;
+    fallbackNote.textContent = "";
     fallbackLink.href = item.href;
     fallbackLink.textContent = item.kind === "image" ? "Open image" : "Watch on YouTube";
 
