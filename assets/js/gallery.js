@@ -67,9 +67,19 @@
   /*
    * Not a UA sniff: iPhone (Safari and every other browser there, since they
    * are all WKWebView) reports no Fullscreen API at all, while iPad and desktop
-   * Safari report the webkit-prefixed one. Where this is false, *nobody* can go
-   * fullscreen — including the YouTube player inside the iframe, whose own
-   * fullscreen button is then a dead control we are better off not drawing.
+   * Safari report the webkit-prefixed one.
+   *
+   * This used to also decide whether to let YouTube draw its own fullscreen
+   * control, on the theory that if we cannot go fullscreen then neither can the
+   * player. That is wrong, and an iPhone proved it: iOS 26.6 / CriOS 142
+   * reports fullscreenEnabled false, requestFullscreen and
+   * webkitRequestFullscreen both absent — and YouTube's own expand button works
+   * anyway. It can, because inside the iframe it calls webkitEnterFullscreen on
+   * its own <video>, which is the one thing iOS does allow (the same call takes
+   * a plain <video> fullscreen there). We cannot reach into a cross-origin
+   * iframe to do that; YouTube can.
+   *
+   * So this now decides only one thing: whether *our* expand button can work.
    */
   const canNativeFullscreen = !!(
     document.fullscreenEnabled || document.webkitFullscreenEnabled
@@ -248,6 +258,14 @@
   const unmuteBtn = $('[data-action="unmute"]');
   const thumbsBtn = $('[data-action="thumbs"]');
   const fsBtn = $('[data-action="fullscreen"]');
+  /*
+   * Kept on iPhone rather than hidden. Two routes to real fullscreen are
+   * available there and both are confirmed on device, so the gallery offers
+   * both: YouTube's own control (one tap, playback uninterrupted) and this
+   * button, which rebuilds the embed without playsinline (see goNative) and
+   * costs the autoplay. Ours is the toolbar, theirs is the player bar, so they
+   * do not sit on top of each other.
+   */
   const fallbackNote = $("[data-fallback-note]");
   const rail = $("[data-rail]");
 
@@ -371,7 +389,10 @@
         playsinline: 1,
         rel: 0,
         controls: YT_CONTROLS,
-        fs: canNativeFullscreen ? 1 : 0, // don't draw a button that cannot work
+        // Always 1. Where we have the Fullscreen API the player's button uses
+        // it; where we do not (iPhone) it is the *only* route to real
+        // fullscreen, so suppressing it was removing the one thing that worked.
+        fs: 1,
         iv_load_policy: 3, // no annotation cards over the video
         modestbranding: 1,
         enablejsapi: 1,

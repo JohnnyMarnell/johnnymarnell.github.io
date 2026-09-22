@@ -487,13 +487,21 @@ test.describe("phone: tap zones and pseudo-fullscreen", () => {
     await expect(lightbox(page)).toBeHidden();
   });
 
-  test("YouTube's own fullscreen button is not drawn where it cannot work", async ({ page }) => {
+  test("YouTube's own fullscreen button is drawn even with no Fullscreen API", async ({ page }) => {
+    /*
+     * This asserted the opposite until an iPhone said otherwise. iOS 26.6 /
+     * CriOS 142 reports fullscreenEnabled false with requestFullscreen and
+     * webkitRequestFullscreen both absent, and YouTube's expand control still
+     * works — it calls webkitEnterFullscreen on its own <video> inside the
+     * iframe, the one fullscreen iOS permits. We cannot make that call across
+     * origins; YouTube can. Passing fs=0 there removed the only control that
+     * worked.
+     */
     await noFullscreenApi(page);
     await stubYouTube(page);
     await page.goto("/led/");
     await open(page);
-    // A visible control that does nothing is worse than no control.
-    await expect(page.locator("[data-player] iframe")).toHaveAttribute("src", /(\?|&)fs=0(&|$)/);
+    await expect(page.locator("[data-player] iframe")).toHaveAttribute("src", /(\?|&)fs=1(&|$)/);
   });
 
   test("expand hands the video to iOS's own player, from where it got to", async ({ page }) => {
