@@ -1,28 +1,80 @@
-{% comment %}
-  Video include - accepts optional portrait=true parameter
-{% endcomment %}
+{%- comment -%}
+  A YouTube tile in a .gallery grid.
 
-{% assign video_id = include.id | replace: 'https://www.youtube.com/watch?v=', '' | replace: 'https://youtu.be/', '' %}
+  Parameters
+    id           YouTube id, or a full watch/youtu.be/shorts URL
+    orientation  "portrait" | "landscape"  (default landscape)
+    portrait     legacy boolean alias for orientation="portrait"
+    aspect       "W:H" override (defaults: 9:16 portrait, 16:9 landscape)
+    alt          accessible label / caption
+    duration     optional badge text, e.g. "1:24"
 
-{% if include.portrait %}
-<div class="vertical-video">
-  <a href="https://www.youtube.com/watch?v={{ video_id }}" 
-     data-fancybox="gallery"
-     data-youtube-id="{{ video_id }}"
-     data-width="640" data-height="1138"
-     class="video-thumbnail video-thumbnail-vertical">
-    <img src="https://img.youtube.com/vi/{{ video_id }}/maxresdefault.jpg" 
-         alt="{{ include.alt | default: 'Video' }}">
-    <i class="fas fa-play play-icon"></i>
-  </a>
-</div>
-{% else %}
-<a href="https://www.youtube.com/watch?v={{ video_id }}" 
-   data-fancybox="gallery"
-   data-youtube-id="{{ video_id }}"
-   class="video-thumbnail">
-  <img src="https://img.youtube.com/vi/{{ video_id }}/maxresdefault.jpg" 
-       alt="{{ include.alt | default: 'Video' }}">
-  <i class="fas fa-play play-icon"></i>
+  Orientation normally comes from _data/media.yml (regenerate with `just media`),
+  so pages don't hard-code it. It cannot be discovered at render or run time:
+  YouTube serves every poster as a 1280x720 composite, and its own oEmbed reports
+  the *embed* box (200x113) for portrait and landscape alike — which is why the
+  old runtime probe against noembed.com could never have worked. The data file is
+  built from a server-side probe of /shorts/<id> instead.
+
+  An explicit orientation= still wins, for anything the probe gets wrong.
+
+  Unknown parameters are reported via data-unknown-params and asserted empty by
+  tests/led-masonry.spec.js, because `protrait=true` silently rendered a
+  portrait video as landscape for months.
+{%- endcomment -%}
+
+{%- assign known = "id,orientation,portrait,aspect,alt,duration" | split: "," -%}
+{%- assign unknown = "" -%}
+{%- for pair in include -%}
+  {%- unless known contains pair[0] -%}
+    {%- assign unknown = unknown | append: pair[0] | append: " " -%}
+  {%- endunless -%}
+{%- endfor -%}
+
+{%- assign vid = include.id
+      | replace: "https://www.youtube.com/watch?v=", ""
+      | replace: "https://www.youtube.com/shorts/", ""
+      | replace: "https://youtu.be/", ""
+      | split: "&" | first | split: "?" | first -%}
+
+{%- assign known_video = site.data.media.videos[vid] -%}
+{%- if include.orientation == "portrait" or include.portrait -%}
+  {%- assign orientation = "portrait" -%}
+  {%- assign aspect = include.aspect | default: "9:16" -%}
+{%- elsif include.orientation == "landscape" -%}
+  {%- assign orientation = "landscape" -%}
+  {%- assign aspect = include.aspect | default: "16:9" -%}
+{%- elsif known_video -%}
+  {%- assign orientation = known_video.orientation -%}
+  {%- assign aspect = include.aspect | default: known_video.aspect -%}
+{%- else -%}
+  {%- comment -%}
+    Not in the data file and not declared. Guessing landscape here is exactly
+    how `protrait=true` hid for months, so mark it and let a test fail.
+  {%- endcomment -%}
+  {%- assign orientation = "landscape" -%}
+  {%- assign aspect = include.aspect | default: "16:9" -%}
+  {%- assign unresolved = true -%}
+{%- endif -%}
+
+{%- assign alt = include.alt | default: "LED video" -%}
+{%- assign base = "https://i.ytimg.com/vi/" | append: vid -%}
+
+<a class="tile" data-tile data-kind="video" data-yt="{{ vid }}"
+   data-orientation="{{ orientation }}" data-aspect="{{ aspect }}"
+   data-caption="{{ alt | escape }}"
+   style="--media-aspect: {{ aspect | replace: ':', ' / ' }}"
+   {% if unknown != "" %}data-unknown-params="{{ unknown | strip }}" {% endif -%}
+   {% if unresolved %}data-orientation-unresolved="{{ vid }}" {% endif %}
+   href="https://www.youtube.com/watch?v={{ vid }}"
+   aria-label="Play video: {{ alt | escape }}">
+  <span class="tile__ambient" style="--poster: url('{{ base }}/maxresdefault.jpg')" aria-hidden="true"></span>
+  <img class="tile__media" data-media
+       data-poster-fallback="{{ base }}/hq720.jpg|{{ base }}/mqdefault.jpg"
+       src="{{ base }}/maxresdefault.jpg" alt="{{ alt | escape }}"
+       width="1280" height="720" loading="lazy" decoding="async">
+  <span class="tile__badge">
+    <svg viewBox="0 0 68 48" aria-hidden="true"><path fill="#f00" d="M66.5 7.7a8 8 0 0 0-5.6-5.7C55.8.6 34 .6 34 .6s-21.8 0-26.9 1.4a8 8 0 0 0-5.6 5.7A84 84 0 0 0 .1 24a84 84 0 0 0 1.4 16.3 8 8 0 0 0 5.6 5.6C12.2 47.4 34 47.4 34 47.4s21.8 0 26.9-1.5a8 8 0 0 0 5.6-5.6A84 84 0 0 0 68 24a84 84 0 0 0-1.5-16.3z"/><path fill="#fff" d="M45 24 27 14v20z"/></svg>
+  </span>
+  {%- if include.duration %}<span class="tile__duration">{{ include.duration }}</span>{% endif -%}
 </a>
-{% endif %}

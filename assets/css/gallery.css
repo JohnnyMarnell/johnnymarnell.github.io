@@ -1,0 +1,517 @@
+/*
+ * Gallery + lightbox for /led and friends.
+ *
+ * Tile geometry, which is the whole trick here:
+ *   A landscape tile is one column wide at 16:9, so its height is 0.5625 x the
+ *   column. A *full-bleed* 9:16 tile in that same column would be 1.778 x the
+ *   column — 3.16 x the landscape height, which is far too tall to sit in a
+ *   grid next to it. So a portrait tile is 1.5 x the landscape height
+ *   (--portrait-scale, sane range 1..2) and the 9:16 poster is centred at full
+ *   tile height, with a blurred blow-up of itself filling the space either
+ *   side. Portrait reads as portrait, nothing is stretched, and no black bars.
+ */
+
+.gallery {
+  --tile-gap: 12px;
+  --portrait-scale: 1.5;
+  --tile-radius: 10px;
+
+  /*
+   * True masonry with no row-span arithmetic. A CSS grid cannot do this: give
+   * grid items an aspect-ratio and every row grows to its tallest item, so the
+   * short ones either stretch (breaking their aspect) or leave a gap. The old
+   * stylesheet worked around that with `grid-auto-rows: 200px` plus integer
+   * `grid-row: span N`, which is why a portrait tile could only ever be 1x or
+   * 2x (really 2.1x, once the row gap is counted) and never anything between.
+   *
+   * Multi-column is the *fallback*, used when JS is off. It packs perfectly but
+   * fills column 1 top to bottom before starting column 2, so the authored
+   * order reads downwards, not across — with 13 tiles in 4 columns, item 2 ends
+   * up under item 1 instead of beside it. gallery.js replaces this with real
+   * columns filled left-to-right (see [data-masonry="js"] below); --col-min is
+   * shared by both so they break at the same widths.
+   */
+  --col-min: 150px;
+  columns: var(--col-min);
+  column-gap: var(--tile-gap);
+  margin: 2rem 0;
+  padding: 0;
+  list-style: none;
+}
+
+@media (min-width: 560px) {
+  .gallery { --col-min: 240px; --tile-gap: 14px; }
+}
+
+@media (min-width: 1024px) {
+  .gallery { --col-min: 300px; --tile-gap: 16px; }
+}
+
+/*
+ * JS masonry: real columns, each tile appended to whichever column is
+ * currently shortest, walking the tiles in authored order. That keeps reading
+ * order left-to-right and top-to-bottom — item 1, 2, 3, 4 across the first row
+ * — while still packing each column to its own height. gallery.js sets
+ * data-masonry="js" only once it has built the columns, so an error or a
+ * disabled script leaves the multi-column fallback above untouched.
+ */
+.gallery[data-masonry="js"] {
+  columns: auto;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--tile-gap);
+}
+
+.gallery__col {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: var(--tile-gap);
+  min-width: 0; /* flex items default to min-width:auto and refuse to shrink */
+}
+
+/* The flex gap supplies the gutter; the fallback's own margin would double it. */
+.gallery[data-masonry="js"] .tile { margin-bottom: 0; }
+
+/* ---------------------------------------------------------------- tiles --- */
+
+.tile {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  border-radius: var(--tile-radius);
+  background: #0b0b0f;
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 12%);
+  aspect-ratio: 16 / 9;
+  text-decoration: none;
+  cursor: zoom-in;
+  -webkit-tap-highlight-color: transparent;
+
+  /* Column flow: never split a tile, and carry the vertical gutter itself. */
+  break-inside: avoid;
+  margin-bottom: var(--tile-gap);
+}
+
+.tile[data-orientation="portrait"] {
+  /* height = --portrait-scale x the landscape tile height */
+  aspect-ratio: calc(16 / 9 / var(--portrait-scale));
+}
+
+.tile:hover,
+.tile:focus-visible {
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 35%);
+  outline: none;
+}
+
+/* Blurred blow-up of the poster, filling whatever the media does not. */
+.tile__ambient {
+  position: absolute;
+  inset: 0;
+  background-image: var(--poster);
+  background-size: cover;
+  background-position: center;
+  filter: blur(22px) saturate(160%) brightness(55%);
+  transform: scale(1.25);
+  pointer-events: none;
+}
+
+.tile__media {
+  position: relative;
+  display: block;
+  height: 100%;
+  width: 100%;
+  margin-inline: auto;
+  object-fit: cover;
+  object-position: center;
+  transition: transform 0.35s ease;
+}
+
+/*
+ * A portrait video's YouTube poster is a 1280x720 composite with the vertical
+ * frame centred, so a centred 9:16 crop lands exactly on the real video:
+ * 720 x 9/16 = 405px, which is precisely the content width. `object-fit: cover`
+ * does that on its own — the old 178%-width/min-height hack was fighting it.
+ */
+.tile[data-orientation="portrait"] .tile__media {
+  width: auto;
+  /* The real shape of the media, so a 3:4 photo is not cropped to 9:16. The
+     *tile* stays --portrait-scale tall either way; only this box varies. */
+  aspect-ratio: var(--media-aspect, 9 / 16);
+}
+
+.tile:hover .tile__media { transform: scale(1.03); }
+
+@media (prefers-reduced-motion: reduce) {
+  .tile__media { transition: none; }
+  .tile:hover .tile__media { transform: none; }
+}
+
+.tile__badge {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+
+.tile__badge svg {
+  width: clamp(38px, 22%, 64px);
+  height: auto;
+  filter: drop-shadow(0 2px 12px rgb(0 0 0 / 70%));
+  opacity: 0.92;
+  transition: transform 0.2s ease;
+}
+
+.tile:hover .tile__badge svg { transform: scale(1.12); }
+
+/* The media box is only ~47% of a portrait tile's width, so the same
+   percentage would make the badge swamp it. */
+.tile[data-orientation="portrait"] .tile__badge svg { width: clamp(30px, 11%, 46px); }
+
+.tile__duration {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgb(0 0 0 / 75%);
+  color: #fff;
+  font: 500 11px/1.5 system-ui, sans-serif;
+}
+
+/* ------------------------------------------------------------ lightbox --- */
+
+.lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: grid;
+  grid-template-rows: 1fr auto; /* stage, then the thumbnail rail */
+  background: #060608;
+  overscroll-behavior: contain;
+}
+
+.lightbox[hidden] { display: none; }
+
+.lightbox__stage {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 0;
+  padding: 0;
+  touch-action: pan-y;
+
+  /* Makes cqw/cqh below mean "this element's content box". */
+  container-type: size;
+}
+
+@media (min-width: 768px) {
+  .lightbox__stage { padding: 56px 72px; }
+}
+
+/*
+ * Sized explicitly rather than left to `auto`. Every child of the slide is
+ * absolutely positioned, so with `width: auto` inside a centred grid item it
+ * shrink-wraps to nothing and the slide collapses — which reads as "the video
+ * is tiny" and, because the poster is then 0x0, as "the poster is missing".
+ *
+ * `--aspect` is a bare `W / H`, so it substitutes textually into both
+ * `aspect-ratio` and the calc below: width is the full stage unless the
+ * resulting height would not fit, in which case height governs. That is what
+ * makes a 9:16 video fill a phone instead of sitting at a fixed 640x1138.
+ *
+ * The units are the *container's*, not the viewport's, so this stays correct
+ * without knowing about the toolbar padding or whether the thumbnail rail is
+ * showing — no subtracting pixel constants from 100dvh and hoping they match.
+ */
+.lightbox__slide {
+  position: relative;
+  aspect-ratio: var(--aspect, 16 / 9);
+  width: min(100cqw, calc(100cqh * var(--aspect, 16 / 9)));
+  height: auto;
+  max-width: 100cqw;
+  max-height: 100cqh;
+  overflow: hidden;
+  background: #000;
+  border-radius: 0;
+}
+
+@media (min-width: 768px) {
+  .lightbox__slide { border-radius: 8px; }
+}
+
+/*
+ * The poster sits *under* the player for the whole load, so the open never
+ * flashes black — the tile's copy is already in cache, so it paints at once.
+ */
+.lightbox__poster {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+.lightbox__slide[data-kind="image"] .lightbox__poster { object-fit: contain; }
+
+.lightbox__player {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
+.lightbox__player iframe { width: 100%; height: 100%; border: 0; display: block; }
+
+/*
+ * A transparent sheet over the player, and the reason swiping works at all on
+ * a phone. An <iframe> is a separate browsing context: touches that land on
+ * the YouTube player never reach this document, so a swipe started over the
+ * video fired no touchstart here and nothing happened. This layer takes the
+ * touch instead — a drag pages the carousel, a tap toggles playback (or takes
+ * the sound off mute, which needs a real user gesture).
+ *
+ * It stops 56px short of the bottom so YouTube's own control bar — scrubber,
+ * CC, quality — stays reachable; those are its controls to draw, not ours (see
+ * YT_CONTROLS in gallery.js). Pointer devices get the player's own handling,
+ * and an error/stall state drops the sheet so the fallback link is clickable.
+ */
+.lightbox__gesture {
+  position: absolute;
+  inset: 0 0 56px 0;
+  z-index: 1;
+  touch-action: pan-y;
+}
+
+.lightbox:not(.is-touch) .lightbox__gesture,
+.lightbox__slide[data-state="error"] .lightbox__gesture,
+.lightbox__slide[data-state="stalled"] .lightbox__gesture { display: none; }
+
+/* Nothing to leave room for on a photo. */
+.lightbox__slide[data-kind="image"] .lightbox__gesture { inset: 0; }
+
+/* A paused image slide keeps the player alive but out of the way. */
+.lightbox__slide[data-kind="image"] .lightbox__player { display: none; }
+
+.lightbox__slide[data-state="playing"] .lightbox__player,
+.lightbox__slide[data-state="stalled"] .lightbox__player { opacity: 1; }
+
+.lightbox__spinner { display: none; }
+
+.lightbox__slide[data-state="loading"] .lightbox__spinner {
+  display: block;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 42px;
+  height: 42px;
+  margin: -21px 0 0 -21px;
+  border: 3px solid rgb(255 255 255 / 25%);
+  border-top-color: #fff;
+  border-radius: 50%;
+  /* 400ms of nothing first, so a fast load never flashes a spinner. */
+  animation: lightbox-spin 0.8s linear infinite, lightbox-fade 0.2s ease 0.4s both;
+}
+
+@keyframes lightbox-spin { to { transform: rotate(360deg); } }
+@keyframes lightbox-fade { from { opacity: 0; } to { opacity: 1; } }
+
+.lightbox__fallback {
+  display: none;
+  position: absolute;
+  inset: auto 0 0 0;
+  padding: 14px;
+  background: linear-gradient(transparent, rgb(0 0 0 / 85%));
+  text-align: center;
+}
+
+.lightbox__slide[data-state="stalled"] .lightbox__fallback,
+.lightbox__slide[data-state="error"] .lightbox__fallback { display: block; }
+
+.lightbox__note {
+  margin: 0 0 10px;
+  color: rgb(255 255 255 / 85%);
+  font: 400 14px/1.4 system-ui, sans-serif;
+}
+
+.lightbox__note:empty { display: none; }
+
+.lightbox__fallback a {
+  display: inline-block;
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: #fff;
+  color: #111;
+  font: 600 14px/1 system-ui, sans-serif;
+  text-decoration: none;
+}
+
+/* ---------------------------------------------------------- lightbox ui --- */
+
+.lightbox__bar {
+  position: absolute;
+  inset: 0 0 auto 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: max(6px, env(safe-area-inset-top)) 6px 6px;
+  background: linear-gradient(rgb(0 0 0 / 70%), transparent);
+  pointer-events: none;
+}
+
+.lightbox__bar > * { pointer-events: auto; }
+.lightbox__spacer { flex: 1; pointer-events: none; }
+
+.lightbox__btn {
+  display: grid;
+  place-items: center;
+  /* 44px is the floor for a thumb. The old expand control was smaller than
+   * its own icon and sat under the slide, so it could not be hit at all. */
+  min-width: 48px;
+  min-height: 48px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgb(20 20 24 / 70%);
+  color: #fff;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.lightbox__btn:hover { background: rgb(40 40 48 / 85%); }
+.lightbox__btn:focus-visible { outline: 2px solid #63c0f5; outline-offset: 2px; }
+.lightbox__btn svg { width: 22px; height: 22px; display: block; }
+.lightbox__btn[hidden] { display: none; }
+
+.lightbox__counter {
+  padding: 0 10px;
+  color: rgb(255 255 255 / 75%);
+  font: 500 13px/1 system-ui, sans-serif;
+  pointer-events: none;
+}
+
+/*
+ * --nav-top is set by gallery.js: the middle of the letterbox band below the
+ * slide when there is one (a 16:9 video on a portrait phone leaves a lot of
+ * it), and the vertical centre when the media fills the stage. Arrows that sit
+ * on the picture itself are the last resort, not the default.
+ */
+.lightbox__nav {
+  position: absolute;
+  top: 50%; /* --nav-top is a phone concern only; see the query below */
+  z-index: 2;
+  transform: translateY(-50%);
+}
+
+.lightbox__nav[data-action="prev"] { left: 6px; }
+.lightbox__nav[data-action="next"] { right: 6px; }
+
+/*
+ * On a phone they used to be display:none — "swipe instead" — which left no
+ * visible way forward at all, and the swipe didn't work either (see
+ * .lightbox__gesture). Keep the 48px tap target, shrink the glyph, hug the
+ * edges, and stay faint while they are over the media.
+ */
+@media (max-width: 767px) {
+  .lightbox__nav {
+    top: var(--nav-top, 50%);
+    background: rgb(8 8 12 / 42%);
+    opacity: 0.5;
+    transition: opacity 0.15s ease;
+  }
+  .lightbox__nav svg { width: 18px; height: 18px; }
+  .lightbox__nav[data-action="prev"] { left: 0; }
+  .lightbox__nav[data-action="next"] { right: 0; }
+  .lightbox__nav:active { opacity: 1; }
+
+  /* Clear of the media — no reason to be shy. */
+  .lightbox.is-letterboxed .lightbox__nav {
+    opacity: 1;
+    background: rgb(20 20 24 / 70%);
+  }
+  .lightbox.is-letterboxed .lightbox__nav[data-action="prev"] { left: 10px; }
+  .lightbox.is-letterboxed .lightbox__nav[data-action="next"] { right: 10px; }
+}
+
+.lightbox__caption {
+  position: absolute;
+  inset: auto 0 0 0;
+  z-index: 2;
+  padding: 10px 16px max(10px, env(safe-area-inset-bottom));
+  background: linear-gradient(transparent, rgb(0 0 0 / 75%));
+  color: rgb(255 255 255 / 85%);
+  font: 400 13px/1.4 system-ui, sans-serif;
+  text-align: center;
+  pointer-events: none;
+}
+
+.lightbox__caption:empty { display: none; }
+
+/* ------------------------------------------------------------ thumbnails --- */
+
+.lightbox__rail {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  padding: 8px 10px max(8px, env(safe-area-inset-bottom));
+  background: #0b0b0f;
+  border-top: 1px solid rgb(255 255 255 / 10%);
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgb(255 255 255 / 25%) transparent;
+}
+
+.lightbox__rail[hidden] { display: none; }
+
+.lightbox__thumb {
+  flex: 0 0 auto;
+  height: 44px;
+  width: auto;
+  aspect-ratio: var(--thumb-aspect, 16 / 9);
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  overflow: hidden;
+  background: #000;
+  opacity: 0.45;
+  outline: 2px solid transparent;
+  outline-offset: 1px;
+  cursor: pointer;
+  transition: opacity 0.15s ease, outline-color 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.lightbox__thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.lightbox__thumb:hover { opacity: 0.8; }
+.lightbox__thumb:focus-visible { outline-color: #63c0f5; opacity: 1; }
+.lightbox__thumb[aria-current="true"] { opacity: 1; outline-color: #63c0f5; }
+
+@media (min-width: 768px) {
+  .lightbox__thumb { height: 54px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lightbox__rail { scroll-behavior: auto; }
+  .lightbox__thumb { transition: none; }
+}
+
+/*
+ * "Expand" without the Fullscreen API. iOS Safari on iPhone has no
+ * Element.requestFullscreen at all — only <video> can go fullscreen natively —
+ * so toggleFullscreen() falls back to this class. It used to set the class and
+ * nothing else: no rule ever matched it, which is exactly why the control
+ * looked dead on a phone. Give the media everything the chrome was using.
+ */
+.lightbox.is-expanded { grid-template-rows: 1fr; }
+.lightbox.is-expanded .lightbox__rail,
+.lightbox.is-expanded .lightbox__caption { display: none; }
+.lightbox.is-expanded .lightbox__stage { padding: 0; }
+.lightbox.is-expanded .lightbox__slide { border-radius: 0; }
+
+/* The bar stays — it is the way back out. */
+.lightbox.is-expanded .lightbox__bar { background: linear-gradient(rgb(0 0 0 / 55%), transparent); }
+
+body.lightbox-open { overflow: hidden; }

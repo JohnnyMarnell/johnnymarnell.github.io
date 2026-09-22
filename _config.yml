@@ -37,8 +37,23 @@ plugins:
   - jekyll-redirect-from # For handling legacy URLs
 
 # Exclude from processing
+# Without these, Jekyll copies the dev tooling straight into _site/ and
+# GitHub Pages publishes it — `curl https://johnnymarnell.github.io/package.json`
+# used to work for justfile/Dockerfile, and the test suite would have joined them.
 exclude:
   - Gemfile
   - Gemfile.lock
   - node_modules/
   - vendor/
+  - .bundle/
+  - package.json
+  - package-lock.json
+  - playwright.config.js
+  - playwright-report/
+  - test-results/
+  - tests/
+  - justfile
+  - Dockerfile
+  - docker-compose.yaml
+  - CLAUDE.md
+# NOT README.md — there is no root index.*, so README.md *is* the homepage.
