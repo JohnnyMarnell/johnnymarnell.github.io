@@ -8,14 +8,15 @@ default:
 install:
     bundle install
 
-# Serve the site locally (default Jekyll port 4000, livereload enabled)
-serve port="4000":
-    bundle exec jekyll serve --port {{port}} --livereload
+# Serve the site (livereload). Binds all interfaces so phones on the LAN can load it.
+# Ex: just serve 4001    Ex: just serve 4000 127.0.0.1
+serve port="4000" host="0.0.0.0":
+    bundle exec jekyll serve --host {{host}} --port {{port}} --livereload
 
 # Serve and open the yotein page in the default browser
 yotein port="4000":
     @( sleep 2 && open "http://127.0.0.1:{{port}}/yotein/" ) &
-    bundle exec jekyll serve --port {{port}} --livereload
+    bundle exec jekyll serve --host 0.0.0.0 --port {{port}} --livereload
 
 # Build the site to _site/ without serving
 build:
