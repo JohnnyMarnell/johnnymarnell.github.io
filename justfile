@@ -29,11 +29,11 @@ clean:
 test-install:
     npm install && npx playwright install chromium
 
-# Gallery/lightbox tests (rebuilds the site first). Ex: just test --ui
+# Gallery/lightbox tests. Rebuilds the site first. Ex: just test --ui
 # Ex: just test led-lightbox --project=mobile
 test *args:
     npx playwright test {{args}}
 
-# Same, against the existing _site build — skips the ~15s Jekyll rebuild
+# Same, against the existing _site — skips the ~15s Jekyll rebuild
 test-fast *args:
     SKIP_BUILD=1 npx playwright test {{args}}

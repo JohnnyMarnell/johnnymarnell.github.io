@@ -4,11 +4,10 @@ const { defineConfig, devices } = require("@playwright/test");
 /**
  * The site is plain Jekyll, so the suite runs against the real `_site` build
  * rather than hand-written fixtures — a broken Liquid include has to fail here.
- * `globalSetup` runs `jekyll build` unless SKIP_BUILD=1 (fast local iteration).
+ * tests/helpers/serve.mjs rebuilds the site before it starts listening.
  */
 module.exports = defineConfig({
   testDir: "./tests",
-  globalSetup: "./tests/helpers/global-setup.js",
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
@@ -37,7 +36,10 @@ module.exports = defineConfig({
   webServer: {
     command: "node tests/helpers/serve.mjs",
     url: "http://127.0.0.1:4321/led/",
-    reuseExistingServer: !process.env.CI,
-    timeout: 30_000,
+    // Never reused: a leftover server would serve a stale _site, and tests
+    // quietly passing against last hour's build is worse than a port clash.
+    reuseExistingServer: false,
+    timeout: 180_000,
+    stdout: "pipe",
   },
 });

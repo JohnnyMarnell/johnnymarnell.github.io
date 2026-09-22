@@ -2,10 +2,41 @@
 // without pulling a server package in.
 import { createServer } from "node:http";
 import { readFile, stat } from "node:fs/promises";
+import { existsSync } from "node:fs";
+import { execFileSync } from "node:child_process";
 import { extname, join, normalize } from "node:path";
 
 const ROOT = new URL("../../_site/", import.meta.url).pathname;
+const REPO = new URL("../../", import.meta.url).pathname;
 const PORT = Number(process.env.PORT || 4321);
+
+/*
+ * The build happens here, before the socket is open, rather than in a
+ * Playwright `globalSetup`. Playwright starts `webServer` as a plugin, and
+ * plugins run *before* globalSetup — so a globalSetup build races the server's
+ * readiness probe and, on a clean checkout with no _site yet, loses: the probe
+ * 404s for its whole timeout and the run dies with "Timed out waiting from
+ * config.webServer" instead of anything to do with the site.
+ *
+ * SKIP_BUILD=1 serves whatever is in _site already (`just test-fast`).
+ */
+if (process.env.SKIP_BUILD === "1") {
+  if (!existsSync(join(ROOT, "led/index.html"))) {
+    console.error("SKIP_BUILD=1 but _site/led/index.html is missing — run `just build` first.");
+    process.exit(1);
+  }
+} else {
+  try {
+    execFileSync("bundle", ["exec", "jekyll", "build"], { cwd: REPO, stdio: "inherit" });
+  } catch (err) {
+    console.error(
+      err.code === "ENOENT"
+        ? "`bundle` is not on PATH. Run `just install`, or build separately and use `just test-fast`."
+        : `jekyll build failed: ${err.message}`,
+    );
+    process.exit(1);
+  }
+}
 
 const TYPES = {
   ".html": "text/html; charset=utf-8",

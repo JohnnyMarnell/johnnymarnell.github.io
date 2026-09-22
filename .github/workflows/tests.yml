@@ -24,8 +24,8 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium
 
-      # globalSetup runs `bundle exec jekyll build`, so the specs assert on the
-      # real Liquid output rather than a fixture.
+      # The webServer (tests/helpers/serve.mjs) runs `jekyll build` before it
+      # listens, so the specs assert on real Liquid output, not a fixture.
       - run: npx playwright test
 
       - uses: actions/upload-artifact@v4
