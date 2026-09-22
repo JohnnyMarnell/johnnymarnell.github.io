@@ -1,31 +1,72 @@
-{% comment %}
-  Simplified image include with fuzzy matching support
-  Can pass full path or partial filename
-{% endcomment %}
+{%- comment -%}
+  An image tile in a .gallery grid.
 
-{% assign img_path = "" %}
+  Parameters
+    src          full path, or a fragment fuzzy-matched against /img/*
+    orientation  "portrait" | "landscape"  (default: detected at runtime)
+    portrait     legacy boolean alias for orientation="portrait"
+    aspect       "W:H" override for the tile
+    alt          accessible label / caption
 
-{% comment %} Check if it's already a full path {% endcomment %}
-{% if include.src contains "/" or include.src contains "." %}
-  {% assign img_path = include.src %}
-{% else %}
-  {% comment %} Fuzzy match - find image containing the pattern {% endcomment %}
-  {% assign search_pattern = include.src | downcase %}
-  {% for file in site.static_files %}
-    {% if file.path contains "/img/" %}
-      {% assign filename_lower = file.name | downcase %}
-      {% if filename_lower contains search_pattern %}
-        {% assign img_path = file.path %}
-        {% break %}
-      {% endif %}
-    {% endif %}
-  {% endfor %}
-{% endif %}
+  Unlike a YouTube poster, a real image carries its own dimensions, so when
+  orientation is not declared the tile is marked data-orientation-auto and
+  gallery.js corrects it from naturalWidth/naturalHeight once decoded.
+{%- endcomment -%}
 
-{% if img_path != "" %}
-<a href="{{ img_path }}" data-fancybox="gallery">
-  <img class="image-item" src="{{ img_path }}" alt="{{ include.alt | default: 'Image' }}" />
+{%- assign known = "src,orientation,portrait,aspect,alt" | split: "," -%}
+{%- assign unknown = "" -%}
+{%- for pair in include -%}
+  {%- unless known contains pair[0] -%}
+    {%- assign unknown = unknown | append: pair[0] | append: " " -%}
+  {%- endunless -%}
+{%- endfor -%}
+
+{%- assign img_path = "" -%}
+{%- if include.src contains "/" or include.src contains "." -%}
+  {%- assign img_path = include.src -%}
+{%- else -%}
+  {%- assign needle = include.src | downcase -%}
+  {%- for file in site.static_files -%}
+    {%- if file.path contains "/img/" -%}
+      {%- assign name = file.name | downcase -%}
+      {%- if name contains needle -%}
+        {%- assign img_path = file.path -%}
+        {%- break -%}
+      {%- endif -%}
+    {%- endif -%}
+  {%- endfor -%}
+{%- endif -%}
+
+{%- if img_path == "" -%}
+  {%- comment -%} Loud rather than silent: a missing image is a broken page. {%- endcomment -%}
+  <a class="tile" data-tile data-kind="image" data-orientation="landscape" data-aspect="16:9"
+     data-missing="{{ include.src | escape }}" href="#"
+     aria-label="Missing image: {{ include.src | escape }}"></a>
+{%- else -%}
+  {%- assign alt = include.alt | default: "Photo" -%}
+  {%- if include.orientation == "portrait" or include.portrait -%}
+    {%- assign orientation = "portrait" -%}
+    {%- assign aspect = include.aspect | default: "3:4" -%}
+    {%- assign auto = false -%}
+  {%- elsif include.orientation == "landscape" -%}
+    {%- assign orientation = "landscape" -%}
+    {%- assign aspect = include.aspect | default: "16:9" -%}
+    {%- assign auto = false -%}
+  {%- else -%}
+    {%- assign orientation = "landscape" -%}
+    {%- assign aspect = include.aspect | default: "16:9" -%}
+    {%- assign auto = true -%}
+  {%- endif -%}
+
+<a class="tile" data-tile data-kind="image"
+   data-orientation="{{ orientation }}" data-aspect="{{ aspect }}"
+   data-caption="{{ alt | escape }}"
+   {% if auto %}data-orientation-auto {% endif -%}
+   {% if unknown != "" %}data-unknown-params="{{ unknown | strip }}" {% endif -%}
+   href="{{ img_path | relative_url }}"
+   aria-label="View photo: {{ alt | escape }}">
+  <span class="tile__ambient" style="--poster: url('{{ img_path | relative_url }}')" aria-hidden="true"></span>
+  <img class="tile__media" data-media src="{{ img_path | relative_url }}"
+       alt="{{ alt | escape }}" loading="lazy" decoding="async">
 </a>
-{% else %}
-  <!-- Image not found for pattern: {{ include.src }} -->
-{% endif %}
+{%- endif -%}

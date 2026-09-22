@@ -107,3 +107,11 @@ dist
 
 # TernJS port file
 .tern-port
+
+# Jekyll bundle + Playwright artifacts
+/vendor
+/.bundle
+/test-results
+/playwright-report
+/.jekyll-cache
+/.jekyll-metadata

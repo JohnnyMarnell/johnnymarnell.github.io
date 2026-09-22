@@ -1,0 +1,332 @@
+/*
+ * Gallery + lightbox for /led and friends.
+ *
+ * Tile geometry, which is the whole trick here:
+ *   A landscape tile is one column wide at 16:9, so its height is 0.5625 x the
+ *   column. A *full-bleed* 9:16 tile in that same column would be 1.778 x the
+ *   column — 3.16 x the landscape height, which is far too tall to sit in a
+ *   grid next to it. So a portrait tile is 1.5 x the landscape height
+ *   (--portrait-scale, sane range 1..2) and the 9:16 poster is centred at full
+ *   tile height, with a blurred blow-up of itself filling the space either
+ *   side. Portrait reads as portrait, nothing is stretched, and no black bars.
+ */
+
+.gallery {
+  --tile-gap: 12px;
+  --portrait-scale: 1.5;
+  --tile-radius: 10px;
+
+  /*
+   * True masonry with no row-span arithmetic. A CSS grid cannot do this: give
+   * grid items an aspect-ratio and every row grows to its tallest item, so the
+   * short ones either stretch (breaking their aspect) or leave a gap. The old
+   * stylesheet worked around that with `grid-auto-rows: 200px` plus integer
+   * `grid-row: span N`, which is why a portrait tile could only ever be 1x or
+   * 2x (really 2.1x, once the row gap is counted) and never anything between.
+   *
+   * Multi-column flows each tile at its own height with no gaps and no
+   * stretching. The trade-off is that tiles read down a column before across,
+   * which is fine here — the lightbox carousel still follows authored order.
+   */
+  columns: 150px;
+  column-gap: var(--tile-gap);
+  margin: 2rem 0;
+  padding: 0;
+  list-style: none;
+}
+
+@media (min-width: 560px) {
+  .gallery { columns: 240px; --tile-gap: 14px; }
+}
+
+@media (min-width: 1024px) {
+  .gallery { columns: 300px; --tile-gap: 16px; }
+}
+
+/* ---------------------------------------------------------------- tiles --- */
+
+.tile {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  border-radius: var(--tile-radius);
+  background: #0b0b0f;
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 12%);
+  aspect-ratio: 16 / 9;
+  text-decoration: none;
+  cursor: zoom-in;
+  -webkit-tap-highlight-color: transparent;
+
+  /* Column flow: never split a tile, and carry the vertical gutter itself. */
+  break-inside: avoid;
+  margin-bottom: var(--tile-gap);
+}
+
+.tile[data-orientation="portrait"] {
+  /* height = --portrait-scale x the landscape tile height */
+  aspect-ratio: calc(16 / 9 / var(--portrait-scale));
+}
+
+.tile:hover,
+.tile:focus-visible {
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 35%);
+  outline: none;
+}
+
+/* Blurred blow-up of the poster, filling whatever the media does not. */
+.tile__ambient {
+  position: absolute;
+  inset: 0;
+  background-image: var(--poster);
+  background-size: cover;
+  background-position: center;
+  filter: blur(22px) saturate(160%) brightness(55%);
+  transform: scale(1.25);
+  pointer-events: none;
+}
+
+.tile__media {
+  position: relative;
+  display: block;
+  height: 100%;
+  width: 100%;
+  margin-inline: auto;
+  object-fit: cover;
+  object-position: center;
+  transition: transform 0.35s ease;
+}
+
+/*
+ * A portrait video's YouTube poster is a 1280x720 composite with the vertical
+ * frame centred, so a centred 9:16 crop lands exactly on the real video:
+ * 720 x 9/16 = 405px, which is precisely the content width. `object-fit: cover`
+ * does that on its own — the old 178%-width/min-height hack was fighting it.
+ */
+.tile[data-orientation="portrait"] .tile__media {
+  width: auto;
+  aspect-ratio: 9 / 16;
+}
+
+.tile:hover .tile__media { transform: scale(1.03); }
+
+@media (prefers-reduced-motion: reduce) {
+  .tile__media { transition: none; }
+  .tile:hover .tile__media { transform: none; }
+}
+
+.tile__badge {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+
+.tile__badge svg {
+  width: clamp(38px, 22%, 64px);
+  height: auto;
+  filter: drop-shadow(0 2px 12px rgb(0 0 0 / 70%));
+  opacity: 0.92;
+  transition: transform 0.2s ease;
+}
+
+.tile:hover .tile__badge svg { transform: scale(1.12); }
+
+.tile__duration {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgb(0 0 0 / 75%);
+  color: #fff;
+  font: 500 11px/1.5 system-ui, sans-serif;
+}
+
+/* ------------------------------------------------------------ lightbox --- */
+
+.lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: grid;
+  grid-template-rows: 1fr;
+  background: rgb(6 6 8 / 97%);
+  overscroll-behavior: contain;
+}
+
+.lightbox[hidden] { display: none; }
+
+.lightbox__stage {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 0;
+  padding: 0;
+  touch-action: pan-y;
+}
+
+@media (min-width: 768px) {
+  .lightbox__stage { padding: 56px 72px; }
+}
+
+.lightbox__slide {
+  position: relative;
+  aspect-ratio: var(--aspect, 16 / 9);
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 100%;
+  overflow: hidden;
+  background: #000;
+  border-radius: 0;
+}
+
+@media (min-width: 768px) {
+  .lightbox__slide { border-radius: 8px; }
+}
+
+/*
+ * The poster sits *under* the player for the whole load, so the open never
+ * flashes black — the tile's copy is already in cache, so it paints at once.
+ */
+.lightbox__poster {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+.lightbox__slide[data-kind="image"] .lightbox__poster { object-fit: contain; }
+
+.lightbox__player {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
+.lightbox__player iframe { width: 100%; height: 100%; border: 0; display: block; }
+
+.lightbox__slide[data-state="playing"] .lightbox__player,
+.lightbox__slide[data-state="stalled"] .lightbox__player { opacity: 1; }
+
+.lightbox__spinner { display: none; }
+
+.lightbox__slide[data-state="loading"] .lightbox__spinner {
+  display: block;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 42px;
+  height: 42px;
+  margin: -21px 0 0 -21px;
+  border: 3px solid rgb(255 255 255 / 25%);
+  border-top-color: #fff;
+  border-radius: 50%;
+  /* 400ms of nothing first, so a fast load never flashes a spinner. */
+  animation: lightbox-spin 0.8s linear infinite, lightbox-fade 0.2s ease 0.4s both;
+}
+
+@keyframes lightbox-spin { to { transform: rotate(360deg); } }
+@keyframes lightbox-fade { from { opacity: 0; } to { opacity: 1; } }
+
+.lightbox__fallback {
+  display: none;
+  position: absolute;
+  inset: auto 0 0 0;
+  padding: 14px;
+  background: linear-gradient(transparent, rgb(0 0 0 / 85%));
+  text-align: center;
+}
+
+.lightbox__slide[data-state="stalled"] .lightbox__fallback,
+.lightbox__slide[data-state="error"] .lightbox__fallback { display: block; }
+
+.lightbox__fallback a {
+  display: inline-block;
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: #fff;
+  color: #111;
+  font: 600 14px/1 system-ui, sans-serif;
+  text-decoration: none;
+}
+
+/* ---------------------------------------------------------- lightbox ui --- */
+
+.lightbox__bar {
+  position: absolute;
+  inset: 0 0 auto 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: max(6px, env(safe-area-inset-top)) 6px 6px;
+  background: linear-gradient(rgb(0 0 0 / 70%), transparent);
+  pointer-events: none;
+}
+
+.lightbox__bar > * { pointer-events: auto; }
+.lightbox__spacer { flex: 1; pointer-events: none; }
+
+.lightbox__btn {
+  display: grid;
+  place-items: center;
+  /* 44px is the floor for a thumb. The old expand control was smaller than
+   * its own icon and sat under the slide, so it could not be hit at all. */
+  min-width: 48px;
+  min-height: 48px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgb(20 20 24 / 70%);
+  color: #fff;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.lightbox__btn:hover { background: rgb(40 40 48 / 85%); }
+.lightbox__btn:focus-visible { outline: 2px solid #63c0f5; outline-offset: 2px; }
+.lightbox__btn svg { width: 22px; height: 22px; display: block; }
+.lightbox__btn[hidden] { display: none; }
+
+.lightbox__counter {
+  padding: 0 10px;
+  color: rgb(255 255 255 / 75%);
+  font: 500 13px/1 system-ui, sans-serif;
+  pointer-events: none;
+}
+
+.lightbox__nav {
+  position: absolute;
+  top: 50%;
+  z-index: 2;
+  transform: translateY(-50%);
+}
+
+.lightbox__nav[data-action="prev"] { left: 6px; }
+.lightbox__nav[data-action="next"] { right: 6px; }
+
+/* On a phone the arrows steal the middle of the picture; swipe instead. */
+@media (max-width: 767px) {
+  .lightbox__nav { display: none; }
+}
+
+.lightbox__caption {
+  position: absolute;
+  inset: auto 0 0 0;
+  z-index: 2;
+  padding: 10px 16px max(10px, env(safe-area-inset-bottom));
+  background: linear-gradient(transparent, rgb(0 0 0 / 75%));
+  color: rgb(255 255 255 / 85%);
+  font: 400 13px/1.4 system-ui, sans-serif;
+  text-align: center;
+  pointer-events: none;
+}
+
+.lightbox__caption:empty { display: none; }
+
+body.lightbox-open { overflow: hidden; }

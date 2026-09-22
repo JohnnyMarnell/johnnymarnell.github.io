@@ -1,0 +1,13 @@
+{
+  "name": "johnnymarnell-github-io",
+  "private": true,
+  "description": "Dev-only tooling. The site itself is plain Jekyll; this exists for the gallery test suite.",
+  "scripts": {
+    "build": "bundle exec jekyll build",
+    "test": "playwright test",
+    "test:headed": "playwright test --headed"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.63.0"
+  }
+}
