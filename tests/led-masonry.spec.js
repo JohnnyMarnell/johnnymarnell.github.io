@@ -81,3 +81,61 @@ test("no request to noembed.com — orientation is declared, not sniffed", async
   await page.waitForTimeout(600);
   expect(stray, "the dead oEmbed probe should be gone").toEqual([]);
 });
+
+test("tiles read left to right across the first row, not down the first column", async ({ page }) => {
+  // The multi-column fallback fills column 1 top-to-bottom before starting
+  // column 2, so item 2 lands *under* item 1. gallery.js builds real columns
+  // and walks the authored order across them; this is that difference.
+  const cols = await page.locator(".gallery__col").count();
+  expect(cols, "gallery.js should have built columns").toBeGreaterThan(1);
+
+  const authored = await page.$$eval("[data-tile]", (els) =>
+    els
+      .map((el) => {
+        const r = el.getBoundingClientRect();
+        return { order: Number(el.dataset.order), x: r.x, y: r.y };
+      })
+      .sort((a, b) => a.order - b.order),
+  );
+  expect(authored.length).toBeGreaterThan(cols);
+
+  const firstRow = authored.slice(0, cols);
+  for (let i = 1; i < firstRow.length; i++) {
+    expect(
+      firstRow[i].x,
+      `item ${i + 1} should sit to the right of item ${i}, not below it`,
+    ).toBeGreaterThan(firstRow[i - 1].x);
+    expect(
+      Math.abs(firstRow[i].y - firstRow[0].y),
+      `item ${i + 1} should share the top row with item 1`,
+    ).toBeLessThan(2);
+  }
+  expect(
+    authored[cols].y,
+    `item ${cols + 1} should wrap to the next row, under item 1`,
+  ).toBeGreaterThan(firstRow[0].y);
+});
+
+test("the columns repack when the viewport changes width", async ({ page }) => {
+  // Explicit widths rather than "resize a bit", so the assertion holds for the
+  // desktop and the phone project alike.
+  const columnsAt = async (width) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.waitForFunction(
+      (w) => Math.abs(document.documentElement.clientWidth - w) < 20,
+      width,
+      { timeout: 4000 },
+    );
+    await page.waitForTimeout(100); // ResizeObserver lands on the next frame
+    return page.locator(".gallery__col").count();
+  };
+
+  const wide = await columnsAt(1200);
+  const narrow = await columnsAt(360);
+  expect(narrow, `1200px gave ${wide} columns, 360px gave ${narrow}`).toBeLessThan(wide);
+
+  // And every tile is still somewhere, exactly once.
+  expect(await page.locator(".gallery__col [data-tile]").count()).toBe(
+    await page.locator("[data-tile]").count(),
+  );
+});

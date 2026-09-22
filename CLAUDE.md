@@ -38,15 +38,26 @@ empty by `tests/led-masonry.spec.js`. This exists because
 `{% include video protrait=true %}` — one transposed letter — silently rendered a
 portrait video as landscape, and nothing caught it.
 
-**Masonry is CSS multi-column, not grid.** A grid cannot do masonry with
-`aspect-ratio` items: every row grows to its tallest item, so shorter ones
-stretch or leave a gap. Note the consequence for tile heights — a landscape tile
-is `0.5625 x column`, so a *full-bleed* 9:16 tile would be `3.16x` its height.
-Portrait tiles are therefore `--portrait-scale` (1.5) times the landscape
-height, with the 9:16 poster centred at full tile height over a blurred blow-up
-of itself. A centred 9:16 crop of a 1280x720 YouTube composite is `405px` wide,
-which is exactly where the real vertical frame sits, so plain
-`object-fit: cover` lands on it — no crop hackery needed.
+**Masonry is built in JS; CSS multi-column is the no-JS fallback.** A grid
+cannot do masonry with `aspect-ratio` items: every row grows to its tallest
+item, so shorter ones stretch or leave a gap. Multi-column packs correctly but
+fills column 1 top-to-bottom before starting column 2, so the authored order
+reads *downwards* — item 2 lands under item 1, not beside it, and no CSS
+property changes that. So `gallery.js` builds `.gallery__col` elements and walks
+the tiles in authored order, appending each to the shortest column (ties go
+left); the first row then reads 1, 2, 3, 4 across. It sets `data-masonry="js"`
+only once the columns exist, so a script error leaves the `columns:` fallback
+alone. `--col-min` is shared by both so they break at the same widths, and each
+tile carries `data-order` because the DOM no longer holds authored order.
+
+Note the consequence for tile heights — a landscape tile is `0.5625 x column`,
+so a *full-bleed* 9:16 tile would be `3.16x` its height. Portrait tiles are
+therefore `--portrait-scale` (1.5) times the landscape height, with the 9:16
+poster centred at full tile height over a blurred blow-up of itself. A centred
+9:16 crop of a 1280x720 YouTube composite is `405px` wide, which is exactly
+where the real vertical frame sits, so plain `object-fit: cover` lands on it —
+no crop hackery needed. Those two ratios are also what the placement loop uses
+to predict heights, so it never reads back layout.
 
 ## Testing YouTube
 
@@ -61,8 +72,47 @@ So the suite **stubs YouTube** (`tests/helpers/youtube.js`): it installs a fake
 `window.YT` with the IFrame API surface before page scripts run, and fails any
 request that escapes to youtube.com. Its `autoplay-blocked` mode reproduces the
 browser autoplay policy — `playVideo()` only reaches PLAYING if the player is
-muted — which is the rule that made phones show a dead player, and the spec that
-drove the muted-start behaviour in `gallery.js`.
+muted (until `unMute()` marks the player activated, the way a real user gesture
+does) — which is the rule that made phones show a dead player, and the spec that
+drives the muted *fallback* in `gallery.js`.
 
 The lightbox's watchdog matters for exactly this reason: whatever YouTube does,
 a slide that isn't playing within 6s stops spinning and offers a link out.
+
+## Player behaviour worth knowing before changing it
+
+**One player, reused across slides** (`loadVideoById`, not destroy/recreate).
+This is about sound: an embed the visitor has unmuted keeps that permission for
+the life of the player, so a swipe or an auto-advance stays audible. Rebuilding
+per slide silently re-mutes everything after the first. The stub models this —
+`unMute()` sets `activated`, which is what lifts `autoplay-blocked`.
+
+**Sound is on by default, and the fallback is remembered.** Videos mount
+unmuted; if nothing is playing 1.2s later the browser refused, so the player is
+muted, restarted, and `sessionStorage` records it — only the first video in a
+tab pays that stall. A tap on a muted video turns the sound on rather than
+pausing, because a tap is the user gesture that can.
+
+**YouTube's chrome is all-or-nothing.** There is no parameter for "keep the
+scrubber, drop the CC button", nothing hides the "Watch on YouTube" link or the
+title overlay, and `modestbranding` has been a no-op since 2023. The only real
+switch is `YT_CONTROLS` in `gallery.js`: `1` for YouTube's own bar, `0` for no
+chrome at all (and then no scrubbing or captions either).
+
+**`.lightbox__gesture` is why swiping works.** An `<iframe>` is a separate
+browsing context, so a touch that lands on the player never reaches this
+document — the swipe handler simply never fired. That transparent sheet takes
+the touch instead. It stops 56px short of the bottom so YouTube's own controls
+stay reachable, and it is only present on touch pointers.
+
+**"Expand" on an iPhone is a CSS class, not the Fullscreen API.** iOS Safari
+has no `Element.requestFullscreen` — only `<video>` goes fullscreen natively.
+`toggleFullscreen()` falls back to `.is-expanded`, which *must* have stylesheet
+rules behind it; it didn't, which is exactly why the button looked dead.
+
+## CI
+
+`.github/workflows/tests.yml` is `workflow_dispatch` only, on purpose. GitHub
+Pages publishes from `main` on its own, and installing Ruby, Node, gems, npm
+deps and Chromium on every push cost minutes for a gate nothing waits on. Run
+the suite locally with `just test` (or from the Actions tab when you want it).

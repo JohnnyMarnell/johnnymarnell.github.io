@@ -24,11 +24,15 @@
    * `grid-row: span N`, which is why a portrait tile could only ever be 1x or
    * 2x (really 2.1x, once the row gap is counted) and never anything between.
    *
-   * Multi-column flows each tile at its own height with no gaps and no
-   * stretching. The trade-off is that tiles read down a column before across,
-   * which is fine here — the lightbox carousel still follows authored order.
+   * Multi-column is the *fallback*, used when JS is off. It packs perfectly but
+   * fills column 1 top to bottom before starting column 2, so the authored
+   * order reads downwards, not across — with 13 tiles in 4 columns, item 2 ends
+   * up under item 1 instead of beside it. gallery.js replaces this with real
+   * columns filled left-to-right (see [data-masonry="js"] below); --col-min is
+   * shared by both so they break at the same widths.
    */
-  columns: 150px;
+  --col-min: 150px;
+  columns: var(--col-min);
   column-gap: var(--tile-gap);
   margin: 2rem 0;
   padding: 0;
@@ -36,12 +40,38 @@
 }
 
 @media (min-width: 560px) {
-  .gallery { columns: 240px; --tile-gap: 14px; }
+  .gallery { --col-min: 240px; --tile-gap: 14px; }
 }
 
 @media (min-width: 1024px) {
-  .gallery { columns: 300px; --tile-gap: 16px; }
+  .gallery { --col-min: 300px; --tile-gap: 16px; }
 }
+
+/*
+ * JS masonry: real columns, each tile appended to whichever column is
+ * currently shortest, walking the tiles in authored order. That keeps reading
+ * order left-to-right and top-to-bottom — item 1, 2, 3, 4 across the first row
+ * — while still packing each column to its own height. gallery.js sets
+ * data-masonry="js" only once it has built the columns, so an error or a
+ * disabled script leaves the multi-column fallback above untouched.
+ */
+.gallery[data-masonry="js"] {
+  columns: auto;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--tile-gap);
+}
+
+.gallery__col {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: var(--tile-gap);
+  min-width: 0; /* flex items default to min-width:auto and refuse to shrink */
+}
+
+/* The flex gap supplies the gutter; the fallback's own margin would double it. */
+.gallery[data-masonry="js"] .tile { margin-bottom: 0; }
 
 /* ---------------------------------------------------------------- tiles --- */
 
@@ -234,6 +264,36 @@
 
 .lightbox__player iframe { width: 100%; height: 100%; border: 0; display: block; }
 
+/*
+ * A transparent sheet over the player, and the reason swiping works at all on
+ * a phone. An <iframe> is a separate browsing context: touches that land on
+ * the YouTube player never reach this document, so a swipe started over the
+ * video fired no touchstart here and nothing happened. This layer takes the
+ * touch instead — a drag pages the carousel, a tap toggles playback (or takes
+ * the sound off mute, which needs a real user gesture).
+ *
+ * It stops 56px short of the bottom so YouTube's own control bar — scrubber,
+ * CC, quality — stays reachable; those are its controls to draw, not ours (see
+ * YT_CONTROLS in gallery.js). Pointer devices get the player's own handling,
+ * and an error/stall state drops the sheet so the fallback link is clickable.
+ */
+.lightbox__gesture {
+  position: absolute;
+  inset: 0 0 56px 0;
+  z-index: 1;
+  touch-action: pan-y;
+}
+
+.lightbox:not(.is-touch) .lightbox__gesture,
+.lightbox__slide[data-state="error"] .lightbox__gesture,
+.lightbox__slide[data-state="stalled"] .lightbox__gesture { display: none; }
+
+/* Nothing to leave room for on a photo. */
+.lightbox__slide[data-kind="image"] .lightbox__gesture { inset: 0; }
+
+/* A paused image slide keeps the player alive but out of the way. */
+.lightbox__slide[data-kind="image"] .lightbox__player { display: none; }
+
 .lightbox__slide[data-state="playing"] .lightbox__player,
 .lightbox__slide[data-state="stalled"] .lightbox__player { opacity: 1; }
 
@@ -332,9 +392,15 @@
   pointer-events: none;
 }
 
+/*
+ * --nav-top is set by gallery.js: the middle of the letterbox band below the
+ * slide when there is one (a 16:9 video on a portrait phone leaves a lot of
+ * it), and the vertical centre when the media fills the stage. Arrows that sit
+ * on the picture itself are the last resort, not the default.
+ */
 .lightbox__nav {
   position: absolute;
-  top: 50%;
+  top: var(--nav-top, 50%);
   z-index: 2;
   transform: translateY(-50%);
 }
@@ -342,9 +408,30 @@
 .lightbox__nav[data-action="prev"] { left: 6px; }
 .lightbox__nav[data-action="next"] { right: 6px; }
 
-/* On a phone the arrows steal the middle of the picture; swipe instead. */
+/*
+ * On a phone they used to be display:none — "swipe instead" — which left no
+ * visible way forward at all, and the swipe didn't work either (see
+ * .lightbox__gesture). Keep the 48px tap target, shrink the glyph, hug the
+ * edges, and stay faint while they are over the media.
+ */
 @media (max-width: 767px) {
-  .lightbox__nav { display: none; }
+  .lightbox__nav {
+    background: rgb(8 8 12 / 42%);
+    opacity: 0.5;
+    transition: opacity 0.15s ease;
+  }
+  .lightbox__nav svg { width: 18px; height: 18px; }
+  .lightbox__nav[data-action="prev"] { left: 0; }
+  .lightbox__nav[data-action="next"] { right: 0; }
+  .lightbox__nav:active { opacity: 1; }
+
+  /* Clear of the media — no reason to be shy. */
+  .lightbox.is-letterboxed .lightbox__nav {
+    opacity: 1;
+    background: rgb(20 20 24 / 70%);
+  }
+  .lightbox.is-letterboxed .lightbox__nav[data-action="prev"] { left: 10px; }
+  .lightbox.is-letterboxed .lightbox__nav[data-action="next"] { right: 10px; }
 }
 
 .lightbox__caption {
@@ -409,5 +496,21 @@
   .lightbox__rail { scroll-behavior: auto; }
   .lightbox__thumb { transition: none; }
 }
+
+/*
+ * "Expand" without the Fullscreen API. iOS Safari on iPhone has no
+ * Element.requestFullscreen at all — only <video> can go fullscreen natively —
+ * so toggleFullscreen() falls back to this class. It used to set the class and
+ * nothing else: no rule ever matched it, which is exactly why the control
+ * looked dead on a phone. Give the media everything the chrome was using.
+ */
+.lightbox.is-expanded { grid-template-rows: 1fr; }
+.lightbox.is-expanded .lightbox__rail,
+.lightbox.is-expanded .lightbox__caption { display: none; }
+.lightbox.is-expanded .lightbox__stage { padding: 0; }
+.lightbox.is-expanded .lightbox__slide { border-radius: 0; }
+
+/* The bar stays — it is the way back out. */
+.lightbox.is-expanded .lightbox__bar { background: linear-gradient(rgb(0 0 0 / 55%), transparent); }
 
 body.lightbox-open { overflow: hidden; }

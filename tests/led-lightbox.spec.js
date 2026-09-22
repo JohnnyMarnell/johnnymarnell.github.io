@@ -1,5 +1,5 @@
 const { test, expect } = require("@playwright/test");
-const { stubYouTube, ytCalls } = require("./helpers/youtube");
+const { stubYouTube, ytCalls, endCurrentVideo } = require("./helpers/youtube");
 
 const PORTRAIT_TILE = '[data-tile][data-orientation="portrait"]';
 const lightbox = (page) => page.locator("[data-lightbox]");
@@ -22,6 +22,30 @@ async function spyFullscreen(page) {
 async function open(page, selector = PORTRAIT_TILE) {
   await page.locator(selector).first().click();
   await expect(lightbox(page)).toBeVisible();
+}
+
+// A real finger, near enough: a touchstart/touchend pair at given points.
+// Playwright's own tap() cannot cross into an iframe, and these specs need to
+// prove that the touch lands on the page rather than on the player.
+async function touchDrag(locator, from, to) {
+  await locator.evaluate(
+    (el, [a, b]) => {
+      const mk = (x, y) => new Touch({ identifier: 1, target: el, clientX: x, clientY: y });
+      const fire = (type, x, y) =>
+        el.dispatchEvent(
+          new TouchEvent(type, {
+            bubbles: true,
+            cancelable: true,
+            touches: type === "touchend" ? [] : [mk(x, y)],
+            changedTouches: [mk(x, y)],
+          }),
+        );
+      fire("touchstart", a.x, a.y);
+      fire("touchmove", b.x, b.y);
+      fire("touchend", b.x, b.y);
+    },
+    [from, to],
+  );
 }
 
 test.describe("phone lightbox", () => {
@@ -239,5 +263,168 @@ test.describe("phone lightbox with the rail", () => {
     // And it must not run under the rail.
     const rail = await page.locator("[data-rail]").boundingBox();
     expect(box.y + box.height, "slide should sit above the rail").toBeLessThanOrEqual(rail.y + 1);
+  });
+});
+
+test.describe("playback", () => {
+  test("a finished video rolls into the next one", async ({ page }) => {
+    await stubYouTube(page);
+    await page.goto("/led/");
+    await open(page, "[data-tile]");
+    await expect(slide(page)).toHaveAttribute("data-state", "playing", { timeout: 8000 });
+
+    await endCurrentVideo(page);
+    await expect(slide(page)).toHaveAttribute("data-index", "1");
+    await expect(slide(page)).toHaveAttribute("data-state", "playing", { timeout: 8000 });
+  });
+
+  test("the carousel wraps: past the last item is the first again", async ({ page }) => {
+    await stubYouTube(page);
+    await page.goto("/led/");
+    const total = await page.locator("[data-tile]").count();
+    await open(page, "[data-tile]");
+
+    await page.locator("[data-thumb]").nth(total - 1).click();
+    await expect(slide(page)).toHaveAttribute("data-index", String(total - 1));
+    await page.keyboard.press("ArrowRight");
+    await expect(slide(page)).toHaveAttribute("data-index", "0");
+  });
+
+  test("videos reach for sound first, and only mute if the browser refuses", async ({ page }) => {
+    await stubYouTube(page); // "normal": unmuted autoplay is allowed
+    await page.goto("/led/");
+    await open(page, "[data-tile]");
+    await expect(slide(page)).toHaveAttribute("data-state", "playing", { timeout: 8000 });
+
+    const construct = (await ytCalls(page)).find((c) => c.fn === "construct");
+    expect(construct.muted, "should not start muted where sound is allowed").toBe(false);
+    await expect(page.locator('[data-action="unmute"]')).toBeHidden();
+  });
+
+  test("turning the sound on once holds for the rest of the gallery", async ({ page }) => {
+    // The point of reusing one player across slides: a player the visitor has
+    // unmuted keeps that permission through loadVideoById, so an auto-advance
+    // or a swipe does not drop back to silence.
+    await stubYouTube(page, { mode: "autoplay-blocked" });
+    await page.goto("/led/");
+    await open(page, "[data-tile]");
+
+    const unmute = page.locator('[data-action="unmute"]');
+    await expect(unmute).toBeVisible({ timeout: 8000 });
+    await unmute.click();
+    await expect(unmute).toBeHidden();
+
+    await page.keyboard.press("ArrowRight");
+    await expect(slide(page)).toHaveAttribute("data-state", "playing", { timeout: 8000 });
+    await expect(unmute, "the next video should still have sound").toBeHidden();
+
+    const built = (await ytCalls(page)).filter((c) => c.fn === "construct").length;
+    expect(built, "the player should be reused, not rebuilt per slide").toBe(1);
+  });
+});
+
+test.describe("phone gestures and chrome", () => {
+  test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+
+  test("a touch on the video reaches this page, not the iframe", async ({ page }) => {
+    // The whole reason swiping did nothing: an <iframe> is a separate browsing
+    // context, so a drag starting on the player never fired a touchstart here.
+    await stubYouTube(page);
+    await page.goto("/led/");
+    await open(page);
+    await expect(slide(page)).toHaveAttribute("data-state", "playing", { timeout: 8000 });
+
+    const hit = await slide(page).evaluate((el) => {
+      const r = el.getBoundingClientRect();
+      const top = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 3);
+      return top?.dataset?.gesture !== undefined ? "gesture" : top?.tagName;
+    });
+    expect(hit, "an IFRAME here swallows the swipe").toBe("gesture");
+  });
+
+  test("swiping across the player moves through the gallery", async ({ page }) => {
+    await stubYouTube(page);
+    await page.goto("/led/");
+    await open(page);
+    await expect(slide(page)).toHaveAttribute("data-state", "playing", { timeout: 8000 });
+
+    const gesture = page.locator("[data-gesture]");
+    await touchDrag(gesture, { x: 320, y: 400 }, { x: 120, y: 405 });
+    await expect(slide(page)).toHaveAttribute("data-index", "1");
+    await touchDrag(gesture, { x: 120, y: 400 }, { x: 320, y: 405 });
+    await expect(slide(page)).toHaveAttribute("data-index", "0");
+  });
+
+  test("a tap on the video pauses it", async ({ page }) => {
+    await stubYouTube(page);
+    await page.goto("/led/");
+    await open(page);
+    await expect(slide(page)).toHaveAttribute("data-state", "playing", { timeout: 8000 });
+
+    await touchDrag(page.locator("[data-gesture]"), { x: 200, y: 400 }, { x: 202, y: 401 });
+    await expect
+      .poll(async () => (await ytCalls(page)).some((c) => c.fn === "pauseVideo"))
+      .toBe(true);
+  });
+
+  test("the arrows are visible and tappable on a phone", async ({ page }) => {
+    // They used to be display:none on the grounds that you could swipe — and
+    // the swipe didn't work either, so there was no way forward at all.
+    await stubYouTube(page);
+    await page.goto("/led/");
+    await open(page, '[data-tile][data-orientation="landscape"]');
+
+    const next = page.locator('[data-action="next"]');
+    await expect(next).toBeVisible();
+    const box = await next.boundingBox();
+    expect(box.width, "tap target width").toBeGreaterThanOrEqual(44);
+    expect(box.height, "tap target height").toBeGreaterThanOrEqual(44);
+
+    const before = await slide(page).getAttribute("data-index");
+    await next.click();
+    await expect(slide(page)).not.toHaveAttribute("data-index", before);
+  });
+
+  test("a letterboxed video keeps the arrows off the picture", async ({ page }) => {
+    // 16:9 on a portrait phone leaves a wide empty band above and below; the
+    // arrows belong there, not over the frame.
+    await stubYouTube(page);
+    await page.goto("/led/");
+    await open(page, '[data-tile][data-orientation="landscape"]');
+    await expect(slide(page)).toHaveAttribute("data-state", "playing", { timeout: 8000 });
+    await expect(lightbox(page)).toHaveClass(/is-letterboxed/);
+
+    const [media, next] = await Promise.all([
+      slide(page).boundingBox(),
+      page.locator('[data-action="next"]').boundingBox(),
+    ]);
+    expect(next.y, "the arrow should start below the video").toBeGreaterThanOrEqual(
+      media.y + media.height - 1,
+    );
+  });
+
+  test("expand still does something where there is no fullscreen API", async ({ page }) => {
+    // iPhone Safari has no Element.requestFullscreen at all. The fallback used
+    // to set a class that no stylesheet rule matched, so the button was dead.
+    await page.addInitScript(() => {
+      delete Element.prototype.requestFullscreen;
+      delete Element.prototype.webkitRequestFullscreen;
+    });
+    await stubYouTube(page);
+    await page.goto("/led/");
+    await open(page);
+    await expect(page.locator("[data-rail]")).toBeVisible();
+    const before = await page.locator("[data-stage]").boundingBox();
+
+    await page.locator('[data-action="fullscreen"]').click();
+    await expect(lightbox(page)).toHaveClass(/is-expanded/);
+    await expect(page.locator("[data-rail]")).toBeHidden();
+    const after = await page.locator("[data-stage]").boundingBox();
+    expect(after.height, "the chrome's space should go to the media").toBeGreaterThan(before.height);
+    await expect(page.locator('[data-action="fullscreen"]')).toHaveAttribute("aria-pressed", "true");
+
+    await page.locator('[data-action="fullscreen"]').click();
+    await expect(lightbox(page)).not.toHaveClass(/is-expanded/);
+    await expect(page.locator("[data-rail]")).toBeVisible();
   });
 });

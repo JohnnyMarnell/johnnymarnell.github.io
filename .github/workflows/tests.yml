@@ -1,9 +1,12 @@
 name: tests
 
+# Manual only. The Playwright suite installs Ruby, Node, gems, npm deps and a
+# Chromium build before it can assert anything — several minutes on every push,
+# for a static site that GitHub Pages deploys straight from `main` regardless.
+# It is a local tool (`just test`), not a gate: run it from the Actions tab when
+# you actually want it.
 on:
-  pull_request:
-  push:
-    branches: [main]
+  workflow_dispatch:
 
 jobs:
   gallery:

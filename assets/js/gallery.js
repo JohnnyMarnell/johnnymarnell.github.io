@@ -1,16 +1,19 @@
 /*
- * Gallery lightbox. Progressive enhancement: with JS off, every tile is still
- * a plain link to the video or the full-size image.
+ * Gallery masonry + lightbox. Progressive enhancement: with JS off, the
+ * stylesheet's multi-column fallback still lays the tiles out and every tile is
+ * still a plain link to the video or the full-size image.
  *
- * Why this is hand-rolled rather than Fancybox: the four things that were
- * actually broken all live in the player, not the shell —
+ * Why this is hand-rolled rather than Fancybox: the things that were actually
+ * broken all live in the player, not the shell —
  *   - open flashed black, because the poster was dropped the moment the iframe
  *     was created instead of being held underneath it;
  *   - the spinner could run forever, because it waited on a "ready" that a
  *     blocked or failed embed never sends;
  *   - nothing played on a phone, because unmuted autoplay is refused there;
  *   - the expand control did nothing on iOS, where only <video> can go
- *     natively fullscreen.
+ *     natively fullscreen;
+ *   - swiping did nothing, because an <iframe> is a separate browsing context
+ *     and the touch never reached this document at all.
  * Each of those is handled explicitly below.
  */
 (() => {
@@ -25,9 +28,26 @@
     150: "The owner doesn't allow this video to be embedded.",
   };
 
-  const PLAY_RETRY_MUTED_MS = 2000; // unmuted autoplay refused -> retry muted
+  /*
+   * YouTube's chrome is all-or-nothing. There is no parameter for "keep the
+   * scrubber but drop the CC button", no way to remove the title/share overlay
+   * that appears on hover and on pause, and `modestbranding` has been a no-op
+   * since 2023 — the only real switch is `controls`:
+   *   1  the player draws its own bar: scrubber, CC, settings/quality gear,
+   *      the "Watch on YouTube" link bottom-left, title overlay on pause.
+   *   0  no bar and no overlays at all; playback is then whatever this file
+   *      drives — tap to play/pause, our own sound and nav buttons — with no
+   *      scrubbing and no caption or quality menu.
+   * Flip this one constant to choose. It is not per-button, and cannot be.
+   */
+  const YT_CONTROLS = 1;
+
+  const PLAY_RETRY_MUTED_MS = 1200; // unmuted autoplay refused -> retry muted
   const WATCHDOG_MS = 6000; // still not playing -> stop spinning, offer YouTube
-  const SWIPE_PX = 40;
+  const SWIPE_PX = 40; // horizontal travel that counts as a page turn
+  const TAP_PX = 10; // travel under which a touch is a tap, not a drag
+  const LETTERBOX_MIN = 64; // empty band under the slide worth moving nav into
+  const PLAYING = 1; // YT.PlayerState.PLAYING, needed before YT has loaded
 
   const gallery = document.querySelector("[data-gallery], .gallery");
   if (!gallery) return;
@@ -35,10 +55,112 @@
   const tiles = [...gallery.querySelectorAll("[data-tile]")];
   if (!tiles.length) return;
 
-  // Phones refuse autoplay with sound, so start muted there and hand the sound
-  // back with a button. Desktop has no such rule and starts audible.
-  const prefersMuted =
+  // The DOM stops carrying authored order once the columns below are built,
+  // so stamp it on the way past — it is what the lightbox indexes by, and the
+  // only way to tell "item 3" from "third in the DOM" when debugging.
+  tiles.forEach((tile, i) => { tile.dataset.order = String(i); });
+
+  const isTouch =
     navigator.maxTouchPoints > 0 || window.matchMedia("(pointer: coarse)").matches;
+
+  /* ------------------------------------------------------------- masonry --- */
+
+  /*
+   * The stylesheet's `columns:` fallback packs perfectly but fills column 1 top
+   * to bottom before starting column 2, so the authored order reads downwards:
+   * with 13 tiles across 4 columns, item 2 lands *under* item 1 rather than
+   * beside it. Nothing in CSS can change that — multi-column balances by
+   * height, and it is the only CSS layout that flows items at their own height.
+   *
+   * So build the columns here instead: walk the tiles in authored order and
+   * append each to whichever column is currently shortest, ties going left.
+   * Item 1..N therefore fill the first row across, and every column still packs
+   * to its own height with no gaps and nothing stretched.
+   *
+   * Heights are computed rather than measured — a tile is either 16:9 or
+   * `--portrait-scale` times that — so there is no read-back of layout in the
+   * placement loop.
+   */
+  let columnCount = 0;
+
+  function layoutMasonry() {
+    const cs = getComputedStyle(gallery);
+    const gap = parseFloat(cs.getPropertyValue("--tile-gap")) || 14;
+    const min = parseFloat(cs.getPropertyValue("--col-min")) || 240;
+    const scale = parseFloat(cs.getPropertyValue("--portrait-scale")) || 1.5;
+    const width = gallery.clientWidth;
+    if (!width) return; // display:none, or not laid out yet
+
+    // Matches how `columns: <length>` picks a count, so JS and the fallback
+    // break at the same widths.
+    const cols = Math.max(1, Math.floor((width + gap) / (min + gap)));
+    if (cols === columnCount) return;
+    columnCount = cols;
+
+    const colWidth = (width - gap * (cols - 1)) / cols;
+    const columns = Array.from({ length: cols }, () => {
+      const el = document.createElement("div");
+      el.className = "gallery__col";
+      return el;
+    });
+    const heights = new Array(cols).fill(0);
+
+    tiles.forEach((tile) => {
+      let best = 0;
+      // Strictly shorter, so equal columns fill left to right.
+      for (let i = 1; i < cols; i++) if (heights[i] < heights[best] - 0.5) best = i;
+      columns[best].appendChild(tile);
+      const ratio = tile.dataset.orientation === "portrait" ? (9 / 16) * scale : 9 / 16;
+      heights[best] += colWidth * ratio + gap;
+    });
+
+    gallery.replaceChildren(...columns);
+    gallery.dataset.masonry = "js";
+  }
+
+  const relayout = () => { columnCount = 0; layoutMasonry(); };
+
+  layoutMasonry();
+  if (window.ResizeObserver) new ResizeObserver(() => layoutMasonry()).observe(gallery);
+  else window.addEventListener("resize", layoutMasonry);
+
+  /* -------------------------------------------------------------- sound --- */
+
+  /*
+   * Sound is on by default. Whether it actually starts that way is the
+   * browser's call, not ours: an autoplaying embed is only allowed audio once
+   * the origin has enough media engagement, and on iOS effectively never
+   * without a gesture aimed at the player. So try unmuted, notice within
+   * PLAY_RETRY_MUTED_MS if nothing started, and fall back to muted with the
+   * sound button showing — rather than starting muted on every touch device
+   * the way this used to.
+   *
+   * `mustStartMuted` remembers that this tab's browser refused, so only the
+   * first video pays the retry. It is cleared the moment a real gesture turns
+   * the sound on, because from then on the *same player instance* keeps its
+   * unmuted permission across loadVideoById — which is why the player below is
+   * reused rather than rebuilt per slide.
+   */
+  const SOUND_PREF = "led-gallery:sound";
+  const MUTED_FALLBACK = "led-gallery:autoplay-needs-mute";
+
+  const readPref = (store, key, dflt) => {
+    try { return window[store].getItem(key) ?? dflt; } catch { return dflt; }
+  };
+  const writePref = (store, key, value) => {
+    try { window[store].setItem(key, value); } catch { /* private mode */ }
+  };
+
+  let soundWanted = readPref("localStorage", SOUND_PREF, "1") !== "0";
+  let mustStartMuted = readPref("sessionStorage", MUTED_FALLBACK, "0") === "1";
+  const startMuted = () => mustStartMuted || !soundWanted;
+
+  function rememberMuteFallback(needed) {
+    mustStartMuted = needed;
+    writePref("sessionStorage", MUTED_FALLBACK, needed ? "1" : "0");
+  }
+
+  /* ------------------------------------------------------------- shell --- */
 
   // Read lazily rather than snapshotting: an image tile's orientation is
   // corrected from its real pixel dimensions once it decodes (see below), and a
@@ -74,12 +196,14 @@
   root.setAttribute("role", "dialog");
   root.setAttribute("aria-modal", "true");
   root.setAttribute("aria-label", "Media viewer");
+  root.classList.toggle("is-touch", isTouch);
   root.hidden = true;
   root.innerHTML = `
     <div class="lightbox__stage" data-stage>
       <div class="lightbox__slide" data-slide data-state="loading">
         <img class="lightbox__poster" data-poster alt="">
         <div class="lightbox__player" data-player><div data-mount></div></div>
+        <div class="lightbox__gesture" data-gesture aria-hidden="true"></div>
         <div class="lightbox__spinner" data-spinner></div>
         <div class="lightbox__fallback" data-fallback>
           <p class="lightbox__note" data-fallback-note></p>
@@ -94,7 +218,7 @@
         <span class="lightbox__spacer"></span>
         <button class="lightbox__btn" data-action="unmute" aria-label="Turn sound on" hidden>${ICONS.sound}</button>
         <button class="lightbox__btn" data-action="thumbs" aria-label="Toggle thumbnails" aria-pressed="true">${ICONS.thumbs}</button>
-        <button class="lightbox__btn" data-action="fullscreen" aria-label="Expand to fullscreen">${ICONS.expand}</button>
+        <button class="lightbox__btn" data-action="fullscreen" aria-label="Expand to fullscreen" aria-pressed="false">${ICONS.expand}</button>
       </div>
       <p class="lightbox__caption" data-caption></p>
     </div>
@@ -111,6 +235,7 @@
   const caption = $("[data-caption]");
   const unmuteBtn = $('[data-action="unmute"]');
   const thumbsBtn = $('[data-action="thumbs"]');
+  const fsBtn = $('[data-action="fullscreen"]');
   const fallbackNote = $("[data-fallback-note]");
   const rail = $("[data-rail]");
 
@@ -142,11 +267,9 @@
   function setRailVisible(visible) {
     rail.hidden = !visible;
     thumbsBtn.setAttribute("aria-pressed", String(visible));
-    try { localStorage.setItem(RAIL_PREF, visible ? "1" : "0"); } catch { /* private mode */ }
+    writePref("localStorage", RAIL_PREF, visible ? "1" : "0");
   }
-  let railPref = "1";
-  try { railPref = localStorage.getItem(RAIL_PREF) ?? "1"; } catch { /* private mode */ }
-  setRailVisible(railPref !== "0");
+  setRailVisible(readPref("localStorage", RAIL_PREF, "1") !== "0");
 
   let index = -1;
   let generation = 0; // bumped per slide, so a slow API resolve can't mount late
@@ -191,60 +314,96 @@
     return apiPromise;
   }
 
+  /*
+   * Two timers per video, both cancelled by the first PLAYING:
+   *   - the browser refused unmuted autoplay, so retry muted and remember it;
+   *   - it is simply not coming, so stop spinning and offer the link out.
+   */
+  function armWatchdogs(mine) {
+    later(() => {
+      // `ready` gates this: a player that never handshook cannot be told to do
+      // anything, and poking playVideo() at one would only paper over the stall
+      // the second timer is there to report.
+      if (mine !== generation || state() === "playing" || !ready || !player) return;
+      try {
+        if (!player.isMuted()) {
+          rememberMuteFallback(true);
+          player.mute();
+          player.playVideo();
+          syncMuteButton();
+        }
+      } catch { /* player went away */ }
+    }, PLAY_RETRY_MUTED_MS);
+
+    later(() => {
+      if (mine !== generation || state() === "playing") return;
+      fallbackNote.textContent = "This is taking longer than it should.";
+      setState("stalled");
+    }, WATCHDOG_MS);
+  }
+
+  function createPlayer(YT, item, mine) {
+    player = new YT.Player($("[data-mount]"), {
+      videoId: item.youtube,
+      host: "https://www.youtube-nocookie.com",
+      playerVars: {
+        autoplay: 1,
+        playsinline: 1, // without this iOS hijacks into its own fullscreen
+        rel: 0,
+        controls: YT_CONTROLS,
+        iv_load_policy: 3, // no annotation cards over the video
+        modestbranding: 1,
+        enablejsapi: 1,
+        mute: startMuted() ? 1 : 0,
+        origin: location.origin,
+      },
+      events: {
+        onReady: ({ target }) => {
+          ready = true;
+          if (startMuted()) target.mute();
+          syncMuteButton();
+          target.playVideo();
+        },
+        onStateChange: ({ data }) => {
+          if (data === YT.PlayerState.PLAYING) {
+            clearTimers();
+            setState("playing");
+            syncMuteButton();
+          } else if (data === YT.PlayerState.ENDED) {
+            advance();
+          }
+        },
+        onError: ({ data }) => {
+          clearTimers();
+          fallbackNote.textContent = YT_ERRORS[data] || "This video failed to load.";
+          setState("error");
+        },
+      },
+    });
+    armWatchdogs(mine);
+  }
+
+  /*
+   * Reuse the player across slides rather than destroying and rebuilding it.
+   * Two reasons, both about sound: a player the visitor has unmuted keeps that
+   * permission through loadVideoById, so the rest of the gallery plays audible
+   * and an auto-advance does not silently re-mute; and there is no iframe
+   * teardown/handshake between slides.
+   */
   function mountVideo(item) {
     const mine = generation;
     youtubeApi().then(
       (YT) => {
-        // The visitor may have swiped on, or closed, while the API loaded.
-        if (mine !== generation) return;
-        player = new YT.Player($("[data-mount]"), {
-          videoId: item.youtube,
-          host: "https://www.youtube-nocookie.com",
-          playerVars: {
-            autoplay: 1,
-            playsinline: 1, // without this iOS hijacks into its own fullscreen
-            rel: 0,
-            modestbranding: 1,
-            enablejsapi: 1,
-            mute: prefersMuted ? 1 : 0,
-            origin: location.origin,
-          },
-          events: {
-            onReady: ({ target }) => {
-              ready = true;
-              if (prefersMuted) target.mute();
-              syncMuteButton();
-              target.playVideo();
-            },
-            onStateChange: ({ data }) => {
-              if (data === YT.PlayerState.PLAYING) {
-                clearTimers();
-                setState("playing");
-                syncMuteButton();
-              }
-            },
-            onError: ({ data }) => {
-              clearTimers();
-              fallbackNote.textContent = YT_ERRORS[data] || "This video failed to load.";
-              setState("error");
-            },
-          },
-        });
-
-        // Safety net for desktop, where a browser may still refuse sound.
-        later(() => {
-          if (state() === "playing" || !ready || !player) return;
+        if (mine !== generation) return; // swiped on, or closed, while it loaded
+        if (player?.loadVideoById) {
           try {
-            if (!player.isMuted()) { player.mute(); player.playVideo(); syncMuteButton(); }
-          } catch { /* player went away */ }
-        }, PLAY_RETRY_MUTED_MS);
-
-        // The spinner is never allowed to outlive this.
-        later(() => {
-          if (state() === "playing") return;
-          fallbackNote.textContent = "This is taking longer than it should.";
-          setState("stalled");
-        }, WATCHDOG_MS);
+            player.loadVideoById(item.youtube);
+            syncMuteButton();
+            armWatchdogs(mine);
+            return;
+          } catch { teardownPlayer(); } // wedged — fall through to a fresh one
+        }
+        createPlayer(YT, item, mine);
       },
       () => {
         if (mine !== generation) return;
@@ -260,13 +419,17 @@
     unmuteBtn.hidden = !muted;
   }
 
+  function playerState() {
+    try { return player?.getPlayerState?.() ?? -1; } catch { return -1; }
+  }
+
   /* ------------------------------------------------------------- slides --- */
 
   function show(i) {
     index = (i + tiles.length) % tiles.length;
     const item = describe(tiles[index]);
     generation += 1;
-    teardownPlayer();
+    clearTimers();
 
     slide.style.setProperty("--aspect", item.aspect);
     slide.dataset.index = String(index);
@@ -280,8 +443,8 @@
 
     caption.textContent = item.caption;
     counter.textContent = `${index + 1} / ${tiles.length}`;
-    thumbs.forEach((t, i) => {
-      if (i === index) t.setAttribute("aria-current", "true");
+    thumbs.forEach((t, n) => {
+      if (n === index) t.setAttribute("aria-current", "true");
       else t.removeAttribute("aria-current");
     });
     thumbs[index]?.scrollIntoView({ block: "nearest", inline: "center", behavior: "smooth" });
@@ -290,22 +453,35 @@
     fallbackLink.textContent = item.kind === "image" ? "Open image" : "Watch on YouTube";
 
     if (item.kind === "image") {
+      // Hold the player rather than destroying it — see mountVideo.
+      try { player?.pauseVideo?.(); } catch { /* fine */ }
+      unmuteBtn.hidden = true;
       // Size the slide from the file's own dimensions — no build-time guess.
       const sized = () => {
         if (poster.naturalWidth && poster.naturalHeight) {
           slide.style.setProperty("--aspect", `${poster.naturalWidth} / ${poster.naturalHeight}`);
         }
         setState("playing");
+        positionNav();
       };
       if (poster.complete) sized();
       else poster.addEventListener("load", sized, { once: true });
       later(() => { if (state() === "loading") setState("stalled"); }, WATCHDOG_MS);
+      positionNav();
       return;
     }
     mountVideo(item);
+    positionNav();
   }
 
   const go = (delta) => show(index + delta);
+
+  // A finished video rolls into the next item, and the last wraps to the first
+  // (show() takes the index modulo the set).
+  function advance() {
+    if (root.hidden || slide.dataset.kind !== "video") return;
+    go(1);
+  }
 
   function open(i) {
     opener = tiles[i] ?? null;
@@ -322,26 +498,66 @@
     document.body.classList.remove("lightbox-open");
     if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
     root.classList.remove("is-expanded");
+    syncExpanded();
     opener?.focus({ preventScroll: true });
     opener = null;
   }
 
-  /* --------------------------------------------------------- fullscreen --- */
+  /* ----------------------------------------------------------- chrome --- */
 
+  /*
+   * Put the arrows in the empty band under the slide whenever there is one —
+   * a 16:9 video on a portrait phone letterboxes hard, and that band is free
+   * real estate. Only when the media fills the stage (a 9:16 video, say) do
+   * they sit on the picture, at the very edges and half-faded.
+   */
+  function positionNav() {
+    if (root.hidden) return;
+    const sb = stage.getBoundingClientRect();
+    const lb = slide.getBoundingClientRect();
+    const band = sb.bottom - lb.bottom;
+    const letterboxed = band >= LETTERBOX_MIN;
+    root.classList.toggle("is-letterboxed", letterboxed);
+    root.style.setProperty(
+      "--nav-top",
+      letterboxed ? `${lb.bottom - sb.top + band / 2}px` : "50%",
+    );
+  }
+
+  function syncExpanded() {
+    const on =
+      !!(document.fullscreenElement || document.webkitFullscreenElement) ||
+      root.classList.contains("is-expanded");
+    fsBtn.setAttribute("aria-pressed", String(on));
+    fsBtn.setAttribute("aria-label", on ? "Exit fullscreen" : "Expand to fullscreen");
+  }
+
+  /*
+   * iOS Safari on iPhone has no Element.requestFullscreen — only <video> can go
+   * fullscreen natively, and a YouTube embed is an iframe. So fall back to a
+   * class that hands the media every pixel the chrome was using. That fallback
+   * existed before but had no stylesheet rule behind it, which is exactly why
+   * the button looked dead on a phone.
+   */
   function toggleFullscreen() {
-    const native = root.requestFullscreen || root.webkitRequestFullscreen;
     if (document.fullscreenElement || document.webkitFullscreenElement) {
       (document.exitFullscreen || document.webkitExitFullscreen)?.call(document);
+      syncExpanded();
       return;
     }
+    const native = root.requestFullscreen || root.webkitRequestFullscreen;
     if (native) {
       const r = native.call(root);
-      // iOS Safari has the method on Element but rejects for non-<video>.
-      if (r?.catch) r.catch(() => root.classList.toggle("is-expanded"));
+      // Present on Element but rejecting is the iPad/desktop-Safari shape.
+      if (r?.catch) r.catch(() => { root.classList.add("is-expanded"); syncExpanded(); });
+      syncExpanded();
       return;
     }
     root.classList.toggle("is-expanded");
+    syncExpanded();
   }
+
+  document.addEventListener("fullscreenchange", () => { syncExpanded(); positionNav(); });
 
   /* ------------------------------------------------------------- events --- */
 
@@ -353,6 +569,30 @@
     }),
   );
 
+  function turnSoundOn() {
+    soundWanted = true;
+    writePref("localStorage", SOUND_PREF, "1");
+    rememberMuteFallback(false);
+    try { player?.unMute(); player?.playVideo(); } catch { /* ignore */ }
+    syncMuteButton();
+  }
+
+  /*
+   * A tap on the media. If it is muted only because autoplay forced it, this
+   * tap is the user gesture that can lift that — take the sound off mute rather
+   * than pausing. Otherwise it is play/pause, the thing a tap on a video means.
+   */
+  function tapMedia() {
+    if (slide.dataset.kind !== "video" || !player) return;
+    let muted = false;
+    try { muted = !!player.isMuted?.(); } catch { muted = false; }
+    if (muted && soundWanted) return turnSoundOn();
+    try {
+      if (playerState() === PLAYING) player.pauseVideo();
+      else player.playVideo();
+    } catch { /* ignore */ }
+  }
+
   root.addEventListener("click", (e) => {
     const thumb = e.target.closest("[data-thumb]");
     if (thumb) return show(Number(thumb.dataset.index));
@@ -362,12 +602,8 @@
     if (action === "prev") return go(-1);
     if (action === "next") return go(1);
     if (action === "fullscreen") return toggleFullscreen();
-    if (action === "thumbs") return setRailVisible(rail.hidden);
-    if (action === "unmute") {
-      try { player?.unMute(); player?.playVideo(); } catch { /* ignore */ }
-      syncMuteButton();
-      return;
-    }
+    if (action === "thumbs") { setRailVisible(rail.hidden); return positionNav(); }
+    if (action === "unmute") return turnSoundOn();
     // Backdrop only: a tap on the media itself belongs to the player.
     if (e.target === stage || e.target === root) close();
   });
@@ -385,15 +621,34 @@
     }
   });
 
-  let swipeX = null;
+  /*
+   * Swipe. The listener is on the stage, but the touches only get here because
+   * of .lightbox__gesture — the sheet over the player. Without it a drag that
+   * starts on the video is consumed by the iframe's own document and this
+   * handler never runs, which is why swiping did nothing before.
+   */
+  let swipe = null;
   const touchPoint = (e) => e.changedTouches?.[0] || e.touches?.[0] || null;
-  stage.addEventListener("touchstart", (e) => { swipeX = touchPoint(e)?.clientX ?? null; }, { passive: true });
-  stage.addEventListener("touchend", (e) => {
-    if (swipeX === null) return;
-    const dx = (touchPoint(e)?.clientX ?? swipeX) - swipeX;
-    swipeX = null;
-    if (Math.abs(dx) >= SWIPE_PX) go(dx < 0 ? 1 : -1);
+  stage.addEventListener("touchstart", (e) => {
+    const p = touchPoint(e);
+    swipe = p ? { x: p.clientX, y: p.clientY, onMedia: !!e.target.closest("[data-gesture]") } : null;
   }, { passive: true });
+  stage.addEventListener("touchend", (e) => {
+    if (!swipe) return;
+    const p = touchPoint(e);
+    const dx = (p?.clientX ?? swipe.x) - swipe.x;
+    const dy = (p?.clientY ?? swipe.y) - swipe.y;
+    const { onMedia } = swipe;
+    swipe = null;
+    if (Math.abs(dx) >= SWIPE_PX && Math.abs(dx) > Math.abs(dy)) return go(dx < 0 ? 1 : -1);
+    if (onMedia && Math.abs(dx) < TAP_PX && Math.abs(dy) < TAP_PX) tapMedia();
+  }, { passive: true });
+
+  // Anything that changes the slide's box — rail toggled, rotation, an image
+  // resolving its real aspect — moves the arrows with it.
+  if (window.ResizeObserver) new ResizeObserver(() => positionNav()).observe(slide);
+  window.addEventListener("resize", positionNav);
+  window.addEventListener("orientationchange", positionNav);
 
   /*
    * An image carries its own dimensions, so a tile the author did not label can
@@ -407,6 +662,7 @@
       const tile = img.closest("[data-tile]");
       tile.dataset.orientation = "portrait";
       tile.dataset.aspect = `${w}:${h}`;
+      relayout(); // its height estimate just changed, so repack the columns
     };
     if (img.complete) apply();
     else img.addEventListener("load", apply, { once: true });

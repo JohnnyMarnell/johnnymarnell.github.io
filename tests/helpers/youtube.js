@@ -39,13 +39,17 @@ async function stubYouTube(page, { mode = "normal" } = {}) {
   });
 
   await page.addInitScript((mode) => {
-    const UNSTARTED = -1, PLAYING = 1, PAUSED = 2;
+    const UNSTARTED = -1, ENDED = 0, PLAYING = 1, PAUSED = 2;
     window.__yt = { calls: [], players: [], mode };
 
     class FakePlayer {
       constructor(el, opts = {}) {
         this.opts = opts;
         this.muted = String(opts.playerVars?.mute) === "1";
+        // A browser lifts its autoplay block once the visitor acts on the
+        // player. unMute() is only ever called from a tap or a click in
+        // gallery.js, so it stands in for that user activation here.
+        this.activated = false;
         this.state = UNSTARTED;
         const host = (opts.host || "https://www.youtube.com").replace(/\/$/, "");
         const qs = new URLSearchParams(opts.playerVars || {}).toString();
@@ -68,24 +72,48 @@ async function stubYouTube(page, { mode = "normal" } = {}) {
       #emit() { this.opts.events?.onStateChange?.({ target: this, data: this.state }); }
       playVideo() {
         window.__yt.calls.push({ fn: "playVideo", muted: this.muted });
-        // The policy: unmuted autoplay is refused on mobile.
-        if (mode === "autoplay-blocked" && !this.muted) return;
+        // The policy: unmuted autoplay is refused on mobile, until the
+        // visitor has interacted with this player.
+        if (mode === "autoplay-blocked" && !this.muted && !this.activated) return;
         this.state = PLAYING;
         setTimeout(() => this.#emit(), 10);
       }
       pauseVideo() { window.__yt.calls.push({ fn: "pauseVideo" }); this.state = PAUSED; this.#emit(); }
+      /*
+       * The real API swaps the video in place and keeps the player — including
+       * whether the visitor has unmuted it. gallery.js relies on that, so the
+       * stub has to model it rather than pretending each slide is a new player.
+       */
+      loadVideoById(id) {
+        window.__yt.calls.push({ fn: "loadVideoById", videoId: id, muted: this.muted });
+        this.opts.videoId = id;
+        this.state = UNSTARTED;
+        if (mode === "error") return this.opts.events?.onError?.({ target: this, data: 2 });
+        if (mode === "never-ready") return;
+        this.playVideo();
+      }
+      // Test hook: there is no way to reach the end of a stub video otherwise.
+      __end() { this.state = ENDED; this.#emit(); }
       mute() { window.__yt.calls.push({ fn: "mute" }); this.muted = true; }
-      unMute() { window.__yt.calls.push({ fn: "unMute" }); this.muted = false; }
+      unMute() { window.__yt.calls.push({ fn: "unMute" }); this.muted = false; this.activated = true; }
       isMuted() { return this.muted; }
       getPlayerState() { return this.state; }
       getIframe() { return this.iframe; }
       destroy() { window.__yt.calls.push({ fn: "destroy" }); this.iframe.remove(); }
     }
 
-    window.YT = { Player: FakePlayer, PlayerState: { UNSTARTED, PLAYING, PAUSED, ENDED: 0, BUFFERING: 3, CUED: 5 } };
+    window.YT = { Player: FakePlayer, PlayerState: { UNSTARTED, PLAYING, PAUSED, ENDED, BUFFERING: 3, CUED: 5 } };
   }, mode);
 }
 
 const ytCalls = (page) => page.evaluate(() => window.__yt?.calls ?? []);
 
-module.exports = { stubYouTube, ytCalls };
+// Drive the live player to its end, the way a video finishing would.
+const endCurrentVideo = (page) =>
+  page.evaluate(() => {
+    const p = window.__yt?.players?.at(-1);
+    if (!p) throw new Error("no player to end — did the slide mount one?");
+    p.__end();
+  });
+
+module.exports = { stubYouTube, ytCalls, endCurrentVideo };
