@@ -97,6 +97,10 @@ async function stubYouTube(page, { mode = "normal" } = {}) {
       mute() { window.__yt.calls.push({ fn: "mute" }); this.muted = true; }
       unMute() { window.__yt.calls.push({ fn: "unMute" }); this.muted = false; this.activated = true; }
       isMuted() { return this.muted; }
+      getCurrentTime() { return this.time || 0; }
+      // Test hook: stand somewhere other than 0:00, so a rebuild can be shown
+      // to resume rather than restart.
+      __seek(t) { this.time = t; }
       getPlayerState() { return this.state; }
       getIframe() { return this.iframe; }
       destroy() { window.__yt.calls.push({ fn: "destroy" }); this.iframe.remove(); }
@@ -108,6 +112,14 @@ async function stubYouTube(page, { mode = "normal" } = {}) {
 
 const ytCalls = (page) => page.evaluate(() => window.__yt?.calls ?? []);
 
+// Park the live player at a given time, as if the visitor had watched that far.
+const seekCurrentVideo = (page, seconds) =>
+  page.evaluate((t) => {
+    const p = window.__yt?.players?.at(-1);
+    if (!p) throw new Error("no player to seek");
+    p.__seek(t);
+  }, seconds);
+
 // Drive the live player to its end, the way a video finishing would.
 const endCurrentVideo = (page) =>
   page.evaluate(() => {
@@ -116,4 +128,4 @@ const endCurrentVideo = (page) =>
     p.__end();
   });
 
-module.exports = { stubYouTube, ytCalls, endCurrentVideo };
+module.exports = { stubYouTube, ytCalls, endCurrentVideo, seekCurrentVideo };

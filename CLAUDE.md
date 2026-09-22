@@ -105,23 +105,25 @@ document — the swipe handler simply never fired. That transparent sheet takes
 the touch instead. It stops 56px short of the bottom so YouTube's own controls
 stay reachable, and it is only present on touch pointers.
 
-**There is no fullscreen on an iPhone, for anyone.** Every browser there is
-WKWebView, and none of them exposes the Fullscreen API — not to us, and not to
-the YouTube player inside the iframe, whose own fullscreen button is therefore
-dead too (`fs` is set to 0 wherever `document.fullscreenEnabled` is false, so
-it isn't drawn). Feature-test it; don't sniff the UA, because iPad *does* have
-the webkit-prefixed API. `toggleFullscreen()` falls back to `.is-expanded`,
-which must have stylesheet rules behind it; at first it didn't, which is why
-the button looked dead, and then it only hid the rail — on a phone the lightbox
-already covers the viewport, so that is not what anyone tapped for. It now also
-adds `.is-rotated` for landscape media on an upright screen, turning the slide
-90° so a 16:9 video goes from 390x219 to 390x693. The `--aspect` sizing formula
-is reused with the container's axes swapped, so nothing is stretched.
+**Fullscreen on an iPhone is iOS's video player, not the Fullscreen API.**
+There is no Fullscreen API there for any browser (all WKWebView), which is why
+our expand button *and* the player's own were both dead — `fs` is set to 0
+wherever `document.fullscreenEnabled` is false so YouTube stops drawing one.
+Feature-test it; don't sniff the UA, because iPad has the prefixed API.
 
-*If true iOS fullscreen ever matters more than the inline gallery:* dropping
-`playsinline` makes iOS hijack playback into its own fullscreen player. That is
-almost certainly what the pre-rewrite page did, and it is incompatible with a
-swipeable lightbox — every video would leave the page to play.
+What does work is what this page used to get for free: a YouTube embed that is
+**not** `playsinline` is handed to the iOS system player, scrubber and all.
+`playsinline: 1` is what a gallery needs to play on the page at all, and is
+exactly what took that away. So expand rebuilds the player with
+`playsinline: 0` and `start: <current time>` — the tap is the user gesture, the
+video resumes, iOS takes over. `playerInline` tracks that, and the next slide
+rebuilds inline, because a player set to go fullscreen cannot autoplay on the
+page. For an image there is no player, so expand falls back to `.is-expanded`,
+which must have stylesheet rules behind it; at first it didn't, which is why it
+looked dead.
+
+Do not "improve" this by rotating the slide 90° to fill an upright phone. It
+was tried, it is not fullscreen, and it was not wanted.
 
 **Nav is by tap zone, not just by button.** The outer 30% of the stage either
 side pages the carousel wherever the tap lands: over the video, over the

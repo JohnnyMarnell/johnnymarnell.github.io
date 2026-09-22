@@ -514,34 +514,4 @@
 /* The bar stays — it is the way back out. */
 .lightbox.is-expanded .lightbox__bar { background: linear-gradient(rgb(0 0 0 / 55%), transparent); }
 
-/*
- * Sideways, because on an iPhone it is the only thing left that "fullscreen"
- * can actually buy. There is no Fullscreen API there for any browser (they are
- * all WKWebView), and the lightbox already covers the viewport, so hiding the
- * rail is not what the visitor tapped for. Turning a 16:9 video 90 degrees on
- * an upright phone takes it from 390x219 to 390x693 — the same picture, three
- * times the size. gallery.js adds .is-rotated only for landscape media on an
- * upright screen with no native fullscreen; the toolbar is a sibling of the
- * slide, so it stays the right way up.
- *
- * The sizing is the slide's usual formula with the container's axes swapped:
- * the box is laid out landscape at stage-height x stage-width and then rotated
- * into place, so the media still keeps its own aspect and is never stretched.
- */
-.lightbox.is-rotated .lightbox__slide {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: min(100cqh, calc(100cqw * var(--aspect, 16 / 9)));
-  height: auto;
-  max-width: 100cqh;
-  max-height: 100cqw;
-  translate: -50% -50%;
-  rotate: 90deg;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .lightbox__slide { transition: rotate 0.25s ease; }
-}
-
 body.lightbox-open { overflow: hidden; }

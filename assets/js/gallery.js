@@ -289,6 +289,7 @@
   let ready = false;
   let opener = null;
   let timers = [];
+  let playerInline = true; // false once expand has handed it to iOS's player
   let swallowClick = false; // a swipe's trailing click is not a tap
 
   const clearTimers = () => { timers.forEach(clearTimeout); timers = []; };
@@ -355,13 +356,19 @@
     }, WATCHDOG_MS);
   }
 
-  function createPlayer(YT, item, mine) {
+  function createPlayer(YT, item, mine, overrides = {}) {
+    playerInline = overrides.playsinline !== 0;
     player = new YT.Player($("[data-mount]"), {
       videoId: item.youtube,
       host: "https://www.youtube-nocookie.com",
       playerVars: {
         autoplay: 1,
-        playsinline: 1, // without this iOS hijacks into its own fullscreen
+        /*
+         * 1 keeps playback on the page, which is what a gallery needs — and is
+         * also precisely what stops iOS handing the video to its own fullscreen
+         * player. The expand button flips it to 0 on demand; see goNative().
+         */
+        playsinline: 1,
         rel: 0,
         controls: YT_CONTROLS,
         fs: canNativeFullscreen ? 1 : 0, // don't draw a button that cannot work
@@ -370,6 +377,7 @@
         enablejsapi: 1,
         mute: startMuted() ? 1 : 0,
         origin: location.origin,
+        ...overrides,
       },
       events: {
         onReady: ({ target }) => {
@@ -409,6 +417,9 @@
     youtubeApi().then(
       (YT) => {
         if (mine !== generation) return; // swiped on, or closed, while it loaded
+        // A player left in iOS's fullscreen mode (playsinline: 0) cannot
+        // autoplay inline, so it is rebuilt rather than reused.
+        if (player && !playerInline) teardownPlayer();
         if (player?.loadVideoById) {
           try {
             player.loadVideoById(item.youtube);
@@ -527,7 +538,6 @@
    */
   function positionNav() {
     if (root.hidden) return;
-    syncExpanded(); // the rotation decision depends on this slide's aspect
     const sb = stage.getBoundingClientRect();
     const lb = slide.getBoundingClientRect();
     const band = sb.bottom - lb.bottom;
@@ -539,40 +549,51 @@
     );
   }
 
-  /*
-   * What "expanded" can mean depends on the platform, so decide it here rather
-   * than in the stylesheet. Where there is a real Fullscreen API this is just
-   * bookkeeping. Where there is not — an iPhone — the lightbox already covers
-   * the viewport, so hiding the rail buys almost nothing and the button reads
-   * as broken. The one real gain left is turning the picture sideways: a 16:9
-   * video on an upright phone goes from 390x219 to 390x693, which is the whole
-   * point of tapping expand. Only landscape media on an upright screen, and
-   * only while expanded.
-   */
   function syncExpanded() {
     const on =
       !!(document.fullscreenElement || document.webkitFullscreenElement) ||
       root.classList.contains("is-expanded");
     fsBtn.setAttribute("aria-pressed", String(on));
     fsBtn.setAttribute("aria-label", on ? "Exit fullscreen" : "Expand to fullscreen");
-
-    const box = stage.getBoundingClientRect();
-    const [w, h] = (slide.style.getPropertyValue("--aspect") || "16 / 9")
-      .split("/")
-      .map((n) => parseFloat(n) || 1);
-    root.classList.toggle(
-      "is-rotated",
-      on && !canNativeFullscreen && box.height > box.width && w > h,
-    );
   }
 
   /*
-   * iOS Safari on iPhone has no Element.requestFullscreen — only <video> can go
-   * fullscreen natively, and a YouTube embed is an iframe. So fall back to a
-   * class that hands the media every pixel the chrome was using. That fallback
-   * existed before but had no stylesheet rule behind it, which is exactly why
-   * the button looked dead on a phone.
+   * Real fullscreen on an iPhone, which no amount of DOM fullscreen can give
+   * you: there is no Fullscreen API there for any browser (all WKWebView), so
+   * neither our button nor the player's own could ever have worked through it.
+   *
+   * What *does* work — and what this page used to get for free — is iOS's own
+   * video player. A YouTube embed is handed to it whenever the video is not
+   * playsinline, complete with the system scrubber, AirPlay and the rest. We
+   * pass playsinline: 1 so the gallery can play on the page at all, which is
+   * exactly what took that away. So on expand, rebuild the player with
+   * playsinline: 0 from the current position: the tap is a user gesture, the
+   * video resumes, and iOS takes it fullscreen.
+   *
+   * The player is left in that mode until the next slide, which rebuilds it
+   * inline (see mountVideo) — it cannot autoplay on the page while it is set
+   * to go fullscreen.
    */
+  function goNative() {
+    if (canNativeFullscreen) return false;
+    if (slide.dataset.kind !== "video" || !window.YT?.Player || !player) return false;
+
+    let at = 0;
+    try { at = Math.max(0, Math.floor(player.getCurrentTime?.() || 0)); } catch { at = 0; }
+
+    // This is a gesture, so the rebuilt player may have sound even if the
+    // autoplayed one was refused it.
+    rememberMuteFallback(false);
+
+    const item = describe(tiles[index]);
+    generation += 1;
+    const mine = generation;
+    teardownPlayer();
+    setState("loading");
+    createPlayer(window.YT, item, mine, { playsinline: 0, start: at });
+    return true;
+  }
+
   function toggleFullscreen() {
     if (document.fullscreenElement || document.webkitFullscreenElement) {
       (document.exitFullscreen || document.webkitExitFullscreen)?.call(document);
@@ -587,6 +608,10 @@
       syncExpanded();
       return;
     }
+    if (goNative()) return;
+    // An image, or no player yet: all that is left is giving it the chrome's
+    // space. The class must have stylesheet rules behind it — it didn't once,
+    // which is why this looked dead.
     root.classList.toggle("is-expanded");
     syncExpanded();
   }
@@ -708,12 +733,8 @@
     // co-ordinates decide between paging and play/pause.
   }, { passive: true });
 
-  // Anything that changes the slide's box — rail toggled, rotation, an image
-  // resolving its real aspect — moves the arrows with it. ResizeObserver
-  // reports the *layout* box, which a rotation does not change, so the sideways
-  // mode needs the transition's end as well or the arrows settle where the
-  // picture used to be.
-  slide.addEventListener("transitionend", positionNav);
+  // Anything that changes the slide's box — rail toggled, an image resolving
+  // its real aspect, the phone turned — moves the arrows with it.
   if (window.ResizeObserver) new ResizeObserver(() => positionNav()).observe(slide);
   window.addEventListener("resize", positionNav);
   window.addEventListener("orientationchange", positionNav);

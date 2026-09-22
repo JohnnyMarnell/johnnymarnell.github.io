@@ -1,5 +1,5 @@
 const { test, expect } = require("@playwright/test");
-const { stubYouTube, ytCalls, endCurrentVideo } = require("./helpers/youtube");
+const { stubYouTube, ytCalls, endCurrentVideo, seekCurrentVideo } = require("./helpers/youtube");
 
 const PORTRAIT_TILE = '[data-tile][data-orientation="portrait"]';
 const lightbox = (page) => page.locator("[data-lightbox]");
@@ -407,16 +407,16 @@ test.describe("phone gestures and chrome", () => {
     );
   });
 
-  test("expand still does something where there is no fullscreen API", async ({ page }) => {
-    // iPhone Safari has no Element.requestFullscreen at all. The fallback used
-    // to set a class that no stylesheet rule matched, so the button was dead.
+  test("expand on a photo still gives it the chrome's space", async ({ page }) => {
+    // A photo has no player to hand to iOS, so the class fallback is all there
+    // is — and it used to set a class that no stylesheet rule matched.
     await page.addInitScript(() => {
       delete Element.prototype.requestFullscreen;
       delete Element.prototype.webkitRequestFullscreen;
     });
     await stubYouTube(page);
     await page.goto("/led/");
-    await open(page);
+    await open(page, '[data-tile][data-kind="image"]');
     await expect(page.locator("[data-rail]")).toBeVisible();
     const before = await page.locator("[data-stage]").boundingBox();
 
@@ -496,35 +496,54 @@ test.describe("phone: tap zones and pseudo-fullscreen", () => {
     await expect(page.locator("[data-player] iframe")).toHaveAttribute("src", /(\?|&)fs=0(&|$)/);
   });
 
-  test("expand turns a landscape video sideways when that is the only gain left", async ({ page }) => {
-    await noFullscreenApi(page);
-    await stubYouTube(page);
-    await page.goto("/led/");
-    await open(page, '[data-tile][data-orientation="landscape"]');
-    await expect(slide(page)).toHaveAttribute("data-state", "playing", { timeout: 8000 });
-    const before = await slide(page).boundingBox();
-
-    await page.locator('[data-action="fullscreen"]').click();
-    await expect(lightbox(page)).toHaveClass(/is-rotated/);
-    await page.waitForTimeout(400); // the rotate transition
-
-    const after = await slide(page).boundingBox();
-    expect(after.height, "sideways should more than double the picture").toBeGreaterThan(
-      before.height * 2,
-    );
-    expect(after.height, "and it should now be taller than it is wide").toBeGreaterThan(after.width);
-
-    await page.locator('[data-action="fullscreen"]').click();
-    await expect(lightbox(page)).not.toHaveClass(/is-rotated/);
-  });
-
-  test("a portrait video is left alone — there is nothing to gain by turning it", async ({ page }) => {
+  test("expand hands the video to iOS's own player, from where it got to", async ({ page }) => {
+    /*
+     * The only real fullscreen an iPhone has is the system video player, and a
+     * YouTube embed goes there when it is not playsinline. The gallery needs
+     * playsinline to play on the page at all, so expand rebuilds the player
+     * without it — resuming, not restarting.
+     */
     await noFullscreenApi(page);
     await stubYouTube(page);
     await page.goto("/led/");
     await open(page);
+    await expect(slide(page)).toHaveAttribute("data-state", "playing", { timeout: 8000 });
+    await expect(page.locator("[data-player] iframe")).toHaveAttribute(
+      "src",
+      /(\?|&)playsinline=1(&|$)/,
+    );
+    await seekCurrentVideo(page, 42);
+
     await page.locator('[data-action="fullscreen"]').click();
-    await expect(lightbox(page)).toHaveClass(/is-expanded/);
-    await expect(lightbox(page)).not.toHaveClass(/is-rotated/);
+    const src = page.locator("[data-player] iframe");
+    await expect(src, "iOS only takes over when the video is not playsinline").toHaveAttribute(
+      "src",
+      /(\?|&)playsinline=0(&|$)/,
+    );
+    await expect(src, "and it should pick up where it was").toHaveAttribute(
+      "src",
+      /(\?|&)start=42(&|$)/,
+    );
+    // Expanding is not a class toggle here — nothing on the page changes shape.
+    await expect(lightbox(page)).not.toHaveClass(/is-expanded/);
   });
+
+  test("moving on rebuilds an inline player, so the next video still plays", async ({ page }) => {
+    // A player set to go fullscreen cannot autoplay on the page, so reusing it
+    // would strand the next slide on a spinner.
+    await noFullscreenApi(page);
+    await stubYouTube(page);
+    await page.goto("/led/");
+    await open(page);
+    await expect(slide(page)).toHaveAttribute("data-state", "playing", { timeout: 8000 });
+    await page.locator('[data-action="fullscreen"]').click();
+
+    await page.keyboard.press("ArrowRight");
+    await expect(slide(page)).toHaveAttribute("data-state", "playing", { timeout: 8000 });
+    await expect(page.locator("[data-player] iframe")).toHaveAttribute(
+      "src",
+      /(\?|&)playsinline=1(&|$)/,
+    );
+  });
+
 });
