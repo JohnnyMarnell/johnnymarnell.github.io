@@ -24,17 +24,17 @@ I also ported the [Pixelblaze](https://electromage.com/pixelblaze/) universe to 
 I even wrote a custom webapp to control it over wifi from our phones. The overall effect was truly stunning, and we were so happy (and proud) to be contributing to the art there.
 
 <div class="gallery" data-gallery>
-{% include video id="Kg0VKvDbvkU" orientation="portrait" alt="Custom Raspberry Pi guitar driving the 10k-LED Chromatik rig" %}
+{% include video id="Kg0VKvDbvkU" alt="Custom Raspberry Pi guitar driving the 10k-LED Chromatik rig" %}
 {% include video id="n92QxOXHpaI" alt="Pixelblaze hacked to take ArtNet over WiFi, driving an extra surface" %}
 {% include video id="qo0L7gmySvQ" alt="LED ceiling animation across the whole grid" %}
 {% include video id="C8sHgpCKFPA" alt="Pattern demo — modulators tied to the beat" %}
 {% include video id="UL10vjc54Lw" alt="Slow colour transitions over the diffuse tubing" %}
-{% include video id="uXDbkIkoSk0" orientation="portrait" alt="Audio-reactive ceiling pattern, close up" %}
-{% include video id="nLRTtxrm7z0" orientation="portrait" alt="Beat-synced pattern sweeping the grid" %}
-{% include video id="SzUIuTK63jA" orientation="portrait" alt="Ceiling in full swing at night" %}
+{% include video id="uXDbkIkoSk0" alt="Audio-reactive ceiling pattern, close up" %}
+{% include video id="nLRTtxrm7z0" alt="Beat-synced pattern sweeping the grid" %}
+{% include video id="SzUIuTK63jA" alt="Ceiling in full swing at night" %}
 {% include image src="0328" alt="The LED ceiling grid from below" %}
 {% include image src="0488" alt="Diffuse tubing lit up close" %}
 {% include image src="0494" alt="Camp interior under the grid" %}
-{% include image src="7415" orientation="portrait" alt="Full height of the installation" %}
+{% include image src="7415" alt="Full height of the installation" %}
 {% include image src="sweetman" alt="Playa mud and LEDs" %}
 </div>

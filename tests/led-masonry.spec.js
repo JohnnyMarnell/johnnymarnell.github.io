@@ -53,6 +53,24 @@ test("the poster fills its tile — no letterbox bars", async ({ page }) => {
   expect(Math.abs(tile - box), "media should be full tile height").toBeLessThan(2);
 });
 
+test("every tile resolves an orientation from data, with no flags in the page", async ({ page }) => {
+  // A video missing from _data/media.yml would otherwise default to landscape
+  // and look exactly like the `protrait=true` bug. Regenerate with `just media`.
+  const unresolved = await page.$$eval("[data-orientation-unresolved]", (els) =>
+    els.map((el) => el.dataset.orientationUnresolved),
+  );
+  expect(unresolved, "run `just media` — these ids are not in _data/media.yml").toEqual([]);
+
+  const unknownParams = await page.$$eval("[data-unknown-params]", (els) =>
+    els.map((el) => `${el.dataset.yt || el.getAttribute("href")}: ${el.dataset.unknownParams}`),
+  );
+  expect(unknownParams, "misspelled include parameters").toEqual([]);
+
+  // Images should be sized from the JPEG header, not corrected after decode.
+  const late = await page.$$eval("[data-tile][data-orientation-auto]", (els) => els.length);
+  expect(late, "image tiles should get their aspect at build time").toBe(0);
+});
+
 test("no request to noembed.com — orientation is declared, not sniffed", async ({ page }) => {
   const stray = [];
   page.on("request", (r) => {

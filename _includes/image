@@ -8,9 +8,13 @@
     aspect       "W:H" override for the tile
     alt          accessible label / caption
 
-  Unlike a YouTube poster, a real image carries its own dimensions, so when
-  orientation is not declared the tile is marked data-orientation-auto and
-  gallery.js corrects it from naturalWidth/naturalHeight once decoded.
+  Orientation and aspect normally come from _data/media.yml (`just media`),
+  which reads them out of the JPEG header — so the tile is the right shape in
+  the first paint, with no reflow.
+
+  Failing that (an image added but not yet probed), the tile is marked
+  data-orientation-auto and gallery.js corrects it from naturalWidth/
+  naturalHeight once decoded — right, but one frame late.
 {%- endcomment -%}
 
 {%- assign known = "src,orientation,portrait,aspect,alt" | split: "," -%}
@@ -44,6 +48,7 @@
      aria-label="Missing image: {{ include.src | escape }}"></a>
 {%- else -%}
   {%- assign alt = include.alt | default: "Photo" -%}
+  {%- assign known_image = site.data.media.images[img_path] -%}
   {%- if include.orientation == "portrait" or include.portrait -%}
     {%- assign orientation = "portrait" -%}
     {%- assign aspect = include.aspect | default: "3:4" -%}
@@ -51,6 +56,10 @@
   {%- elsif include.orientation == "landscape" -%}
     {%- assign orientation = "landscape" -%}
     {%- assign aspect = include.aspect | default: "16:9" -%}
+    {%- assign auto = false -%}
+  {%- elsif known_image -%}
+    {%- assign orientation = known_image.orientation -%}
+    {%- assign aspect = include.aspect | default: known_image.aspect -%}
     {%- assign auto = false -%}
   {%- else -%}
     {%- assign orientation = "landscape" -%}
@@ -61,6 +70,7 @@
 <a class="tile" data-tile data-kind="image"
    data-orientation="{{ orientation }}" data-aspect="{{ aspect }}"
    data-caption="{{ alt | escape }}"
+   style="--media-aspect: {{ aspect | replace: ':', ' / ' }}"
    {% if auto %}data-orientation-auto {% endif -%}
    {% if unknown != "" %}data-unknown-params="{{ unknown | strip }}" {% endif -%}
    href="{{ img_path | relative_url }}"

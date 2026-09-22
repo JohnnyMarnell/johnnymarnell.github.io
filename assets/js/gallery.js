@@ -64,6 +64,7 @@
     prev: icon('<path d="m15 18-6-6 6-6"/>'),
     next: icon('<path d="m9 18 6-6-6-6"/>'),
     expand: icon('<path d="M8 3H5a2 2 0 0 0-2 2v3m13-5h3a2 2 0 0 1 2 2v3m0 6v3a2 2 0 0 1-2 2h-3m-5 0H5a2 2 0 0 1-2-2v-3"/>'),
+    thumbs: icon('<rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>'),
     sound: icon('<path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>'),
   };
 
@@ -92,10 +93,12 @@
         <span class="lightbox__counter" data-counter></span>
         <span class="lightbox__spacer"></span>
         <button class="lightbox__btn" data-action="unmute" aria-label="Turn sound on" hidden>${ICONS.sound}</button>
+        <button class="lightbox__btn" data-action="thumbs" aria-label="Toggle thumbnails" aria-pressed="true">${ICONS.thumbs}</button>
         <button class="lightbox__btn" data-action="fullscreen" aria-label="Expand to fullscreen">${ICONS.expand}</button>
       </div>
       <p class="lightbox__caption" data-caption></p>
-    </div>`;
+    </div>
+    <div class="lightbox__rail" data-rail role="tablist" aria-label="Gallery thumbnails"></div>`;
   document.body.appendChild(root);
 
   const $ = (sel) => root.querySelector(sel);
@@ -107,7 +110,43 @@
   const counter = $("[data-counter]");
   const caption = $("[data-caption]");
   const unmuteBtn = $('[data-action="unmute"]');
+  const thumbsBtn = $('[data-action="thumbs"]');
   const fallbackNote = $("[data-fallback-note]");
+  const rail = $("[data-rail]");
+
+  /*
+   * The thumbnail rail. Fancybox showed one by default and the first pass of
+   * this rewrite quietly dropped it; with 13 items it is the only way to see
+   * where you are in the set without stepping through.
+   */
+  const RAIL_PREF = "led-gallery:thumbs";
+  tiles.forEach((tile, i) => {
+    const media = tile.querySelector("[data-media]");
+    const btn = document.createElement("button");
+    btn.className = "lightbox__thumb";
+    btn.type = "button";
+    btn.dataset.thumb = "";
+    btn.dataset.index = String(i);
+    btn.style.setProperty("--thumb-aspect", (tile.dataset.aspect || "16:9").replace(":", " / "));
+    btn.setAttribute("aria-label", tile.dataset.caption || `Item ${i + 1}`);
+    const img = document.createElement("img");
+    img.src = media?.currentSrc || media?.src || "";
+    img.alt = "";
+    img.loading = "lazy";
+    img.decoding = "async";
+    btn.appendChild(img);
+    rail.appendChild(btn);
+  });
+  const thumbs = [...rail.querySelectorAll("[data-thumb]")];
+
+  function setRailVisible(visible) {
+    rail.hidden = !visible;
+    thumbsBtn.setAttribute("aria-pressed", String(visible));
+    try { localStorage.setItem(RAIL_PREF, visible ? "1" : "0"); } catch { /* private mode */ }
+  }
+  let railPref = "1";
+  try { railPref = localStorage.getItem(RAIL_PREF) ?? "1"; } catch { /* private mode */ }
+  setRailVisible(railPref !== "0");
 
   let index = -1;
   let generation = 0; // bumped per slide, so a slow API resolve can't mount late
@@ -241,6 +280,11 @@
 
     caption.textContent = item.caption;
     counter.textContent = `${index + 1} / ${tiles.length}`;
+    thumbs.forEach((t, i) => {
+      if (i === index) t.setAttribute("aria-current", "true");
+      else t.removeAttribute("aria-current");
+    });
+    thumbs[index]?.scrollIntoView({ block: "nearest", inline: "center", behavior: "smooth" });
     fallbackNote.textContent = "";
     fallbackLink.href = item.href;
     fallbackLink.textContent = item.kind === "image" ? "Open image" : "Watch on YouTube";
@@ -310,11 +354,15 @@
   );
 
   root.addEventListener("click", (e) => {
+    const thumb = e.target.closest("[data-thumb]");
+    if (thumb) return show(Number(thumb.dataset.index));
+
     const action = e.target.closest("[data-action]")?.dataset.action;
     if (action === "close") return close();
     if (action === "prev") return go(-1);
     if (action === "next") return go(1);
     if (action === "fullscreen") return toggleFullscreen();
+    if (action === "thumbs") return setRailVisible(rail.hidden);
     if (action === "unmute") {
       try { player?.unMute(); player?.playVideo(); } catch { /* ignore */ }
       syncMuteButton();

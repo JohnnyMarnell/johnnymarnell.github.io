@@ -166,3 +166,78 @@ test.describe("carousel", () => {
     await expect(slide(page)).toHaveAttribute("data-kind", "image");
   });
 });
+
+test.describe("thumbnail rail", () => {
+  // Fancybox showed a filmstrip by default (Thumbs plugin, minCount: 2) and the
+  // rewrite dropped it. With 13 items it is the only way to see where you are.
+  test("lists every item, marks the current one, and jumps on click", async ({ page }) => {
+    await stubYouTube(page);
+    await page.goto("/led/");
+    const total = await page.locator("[data-tile]").count();
+    await open(page, "[data-tile]");
+
+    const thumbs = page.locator("[data-thumb]");
+    await expect(thumbs).toHaveCount(total);
+    await expect(thumbs.nth(0)).toHaveAttribute("aria-current", "true");
+
+    await thumbs.nth(4).click();
+    await expect(slide(page)).toHaveAttribute("data-index", "4");
+    await expect(thumbs.nth(4)).toHaveAttribute("aria-current", "true");
+    await expect(thumbs.nth(0)).not.toHaveAttribute("aria-current", "true");
+  });
+
+  test("follows keyboard navigation", async ({ page }) => {
+    await stubYouTube(page);
+    await page.goto("/led/");
+    await open(page, "[data-tile]");
+    await page.keyboard.press("ArrowRight");
+    await expect(page.locator("[data-thumb]").nth(1)).toHaveAttribute("aria-current", "true");
+  });
+
+  test("the toggle hides and restores it, returning the space", async ({ page }, testInfo) => {
+    await stubYouTube(page);
+    await page.goto("/led/");
+    await open(page, "[data-tile]");
+
+    const rail = page.locator("[data-rail]");
+    const stage = page.locator("[data-stage]");
+    await expect(rail).toBeVisible();
+    const before = { stage: await stage.boundingBox(), slide: await slide(page).boundingBox() };
+
+    await page.locator('[data-action="thumbs"]').click();
+    await expect(rail).toBeHidden();
+    const after = { stage: await stage.boundingBox(), slide: await slide(page).boundingBox() };
+
+    // The freed height goes to the stage rather than being left as a gap.
+    expect(after.stage.height).toBeGreaterThan(before.stage.height);
+    expect(after.slide.height).toBeGreaterThanOrEqual(before.slide.height);
+
+    // On a phone a 9:16 slide is already as wide as the viewport, so it is
+    // width-constrained and cannot grow — only on the wider viewport does the
+    // media itself actually get bigger.
+    if (testInfo.project.name === "desktop") {
+      expect(after.slide.height).toBeGreaterThan(before.slide.height);
+    }
+
+    await page.locator('[data-action="thumbs"]').click();
+    await expect(rail).toBeVisible();
+  });
+});
+
+test.describe("phone lightbox with the rail", () => {
+  test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+
+  test("a portrait video still fills the viewport with the rail showing", async ({ page }) => {
+    await stubYouTube(page);
+    await page.goto("/led/");
+    await open(page);
+    await expect(page.locator("[data-rail]")).toBeVisible();
+
+    const box = await slide(page).boundingBox();
+    expect(box.width / 390).toBeGreaterThan(0.85);
+    expect(box.height / 844).toBeGreaterThan(0.7);
+    // And it must not run under the rail.
+    const rail = await page.locator("[data-rail]").boundingBox();
+    expect(box.y + box.height, "slide should sit above the rail").toBeLessThanOrEqual(rail.y + 1);
+  });
+});

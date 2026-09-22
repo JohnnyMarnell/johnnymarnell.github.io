@@ -104,7 +104,9 @@
  */
 .tile[data-orientation="portrait"] .tile__media {
   width: auto;
-  aspect-ratio: 9 / 16;
+  /* The real shape of the media, so a 3:4 photo is not cropped to 9:16. The
+     *tile* stays --portrait-scale tall either way; only this box varies. */
+  aspect-ratio: var(--media-aspect, 9 / 16);
 }
 
 .tile:hover .tile__media { transform: scale(1.03); }
@@ -154,7 +156,7 @@
   inset: 0;
   z-index: 9999;
   display: grid;
-  grid-template-rows: 1fr;
+  grid-template-rows: 1fr auto; /* stage, then the thumbnail rail */
   background: #060608;
   overscroll-behavior: contain;
 }
@@ -162,18 +164,19 @@
 .lightbox[hidden] { display: none; }
 
 .lightbox__stage {
-  --stage-h: 100dvh;
-
   position: relative;
   display: grid;
   place-items: center;
   min-height: 0;
   padding: 0;
   touch-action: pan-y;
+
+  /* Makes cqw/cqh below mean "this element's content box". */
+  container-type: size;
 }
 
 @media (min-width: 768px) {
-  .lightbox__stage { padding: 56px 72px; --stage-h: calc(100dvh - 112px); }
+  .lightbox__stage { padding: 56px 72px; }
 }
 
 /*
@@ -186,14 +189,18 @@
  * `aspect-ratio` and the calc below: width is the full stage unless the
  * resulting height would not fit, in which case height governs. That is what
  * makes a 9:16 video fill a phone instead of sitting at a fixed 640x1138.
+ *
+ * The units are the *container's*, not the viewport's, so this stays correct
+ * without knowing about the toolbar padding or whether the thumbnail rail is
+ * showing — no subtracting pixel constants from 100dvh and hoping they match.
  */
 .lightbox__slide {
   position: relative;
   aspect-ratio: var(--aspect, 16 / 9);
-  width: min(100%, calc(var(--stage-h) * var(--aspect, 16 / 9)));
+  width: min(100cqw, calc(100cqh * var(--aspect, 16 / 9)));
   height: auto;
-  max-width: 100%;
-  max-height: 100%;
+  max-width: 100cqw;
+  max-height: 100cqh;
   overflow: hidden;
   background: #000;
   border-radius: 0;
@@ -353,5 +360,54 @@
 }
 
 .lightbox__caption:empty { display: none; }
+
+/* ------------------------------------------------------------ thumbnails --- */
+
+.lightbox__rail {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  padding: 8px 10px max(8px, env(safe-area-inset-bottom));
+  background: #0b0b0f;
+  border-top: 1px solid rgb(255 255 255 / 10%);
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgb(255 255 255 / 25%) transparent;
+}
+
+.lightbox__rail[hidden] { display: none; }
+
+.lightbox__thumb {
+  flex: 0 0 auto;
+  height: 44px;
+  width: auto;
+  aspect-ratio: var(--thumb-aspect, 16 / 9);
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  overflow: hidden;
+  background: #000;
+  opacity: 0.45;
+  outline: 2px solid transparent;
+  outline-offset: 1px;
+  cursor: pointer;
+  transition: opacity 0.15s ease, outline-color 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.lightbox__thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.lightbox__thumb:hover { opacity: 0.8; }
+.lightbox__thumb:focus-visible { outline-color: #63c0f5; opacity: 1; }
+.lightbox__thumb[aria-current="true"] { opacity: 1; outline-color: #63c0f5; }
+
+@media (min-width: 768px) {
+  .lightbox__thumb { height: 54px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lightbox__rail { scroll-behavior: auto; }
+  .lightbox__thumb { transition: none; }
+}
 
 body.lightbox-open { overflow: hidden; }

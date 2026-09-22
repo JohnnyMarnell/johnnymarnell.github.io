@@ -25,6 +25,10 @@ build:
 clean:
     bundle exec jekyll clean
 
+# Regenerate _data/media.yml (video orientation + image dimensions)
+media:
+    node scripts/probe-media.mjs
+
 # Install the Playwright browser used by the gallery tests
 test-install:
     npm install && npx playwright install chromium
