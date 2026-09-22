@@ -47,6 +47,7 @@ GEM
       net-http (>= 0.5.0)
     ffi (1.17.2-aarch64-linux-gnu)
     ffi (1.17.2-arm64-darwin)
+    ffi (1.17.2-x86_64-linux-gnu)
     ffi (1.17.2-x86_64-linux-musl)
     forwardable-extended (2.6.0)
     gemoji (4.1.0)
@@ -237,6 +238,8 @@ GEM
       racc (~> 1.4)
     nokogiri (1.18.9-arm64-darwin)
       racc (~> 1.4)
+    nokogiri (1.18.9-x86_64-linux-gnu)
+      racc (~> 1.4)
     nokogiri (1.18.9-x86_64-linux-musl)
       racc (~> 1.4)
     octokit (4.25.1)
@@ -277,6 +280,7 @@ PLATFORMS
   aarch64-linux-gnu
   arm64-darwin-22
   arm64-darwin-24
+  x86_64-linux
   x86_64-linux-musl
 
 DEPENDENCIES
