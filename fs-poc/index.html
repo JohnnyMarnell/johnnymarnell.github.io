@@ -130,6 +130,23 @@
   <span class="chip" data-chip="pseudo">untested</span>
 </div>
 
+<h2>4 · The one that decides the gallery</h2>
+<div class="test">
+  <div>
+    <button data-try="autoplay-fs">Autoplay AND fullscreen together</button>
+    <div class="what"><code>playsinline=1 &amp; autoplay=1 &amp; mute=1 &amp; fs=1</code> — keeps inline
+      autoplay (iOS only allows it muted and inline) while leaving YouTube's own expand
+      control on screen. <b>Success:</b> it starts playing by itself, <i>and</i> the expand
+      icon still goes fullscreen. If both hold, autoplay and fullscreen are not
+      mutually exclusive — you just tap YouTube's button instead of ours.</div>
+    <div class="ask" data-ask="autoplay-fs">
+      <button data-answer="autoplay-fs:pass">Both worked</button>
+      <button data-answer="autoplay-fs:fail">Autoplayed, expand did not</button>
+      <button data-answer="autoplay-fs:noauto">It did not autoplay</button>
+    </div>
+  </div><span class="chip" data-chip="autoplay-fs">untested</span>
+</div>
+
 <div class="test" style="border:0">
   <div><button data-try="reset">↺ Reset</button></div>
 </div>
@@ -186,9 +203,29 @@
       b.textContent = "The expand button can just call requestFullscreen(). This is not an iPhone.";
       return;
     }
+    if (results["autoplay-fs"] === true) {
+      t.textContent = "Answer: keep autoplay, use YouTube's own expand button.";
+      b.textContent = "playsinline=1 + autoplay=1 + mute=1 + fs=1 gives both. The gallery should stop forcing fs=0 on iOS and drop its own expand button there.";
+      return;
+    }
+    if (results["autoplay-fs"] === "noauto") {
+      t.textContent = "Autoplay itself was refused here.";
+      b.textContent = "Separate problem from fullscreen — send me the log.";
+      return;
+    }
+    if (results["autoplay-fs"] === false) {
+      t.textContent = "They really are mutually exclusive.";
+      b.textContent = "Autoplay works but the expand control does not once autoplaying. Then it is autoplay, or a tap-to-fullscreen that reloads without playsinline — pick one.";
+      return;
+    }
+    if (results["yt-controls"] && results["no-playsinline"]) {
+      t.textContent = "Both fullscreen routes work. Now test 4.";
+      b.textContent = "YouTube's own button works, and so does dropping playsinline. Test 4 asks whether autoplay can coexist with the first one.";
+      return;
+    }
     if (results["no-playsinline"]) {
-      t.textContent = "Answer: hand off to the iOS player.";
-      b.textContent = "Dropping playsinline is what gives you real fullscreen. That is what /led's expand button should do.";
+      t.textContent = "Handing off to the iOS player works.";
+      b.textContent = "Now try test 4 — whether autoplay survives alongside it.";
       return;
     }
     if (results["html5-video"] && results["no-playsinline"] === false) {
@@ -212,13 +249,16 @@
     hint.className = "";
     var p = new URLSearchParams({
       playsinline: o.playsinline === 0 ? "0" : "1",
-      fs: o.fs === 0 ? "0" : "1", rel: "0", autoplay: "0"
+      fs: o.fs === 0 ? "0" : "1", rel: "0",
+      autoplay: o.autoplay ? "1" : "0",
+      mute: o.autoplay ? "1" : "0"
     });
     stage.innerHTML = '<iframe id="yt" src="https://www.youtube.com/embed/' + VIDEO + "?" + p +
       '" title="YouTube" allow="autoplay; encrypted-media; fullscreen; picture-in-picture"' +
       ' allowfullscreen webkitallowfullscreen></iframe>';
     stage.appendChild(hint);
-    log("embed playsinline=" + p.get("playsinline") + " fs=" + p.get("fs"));
+    log("embed playsinline=" + p.get("playsinline") + " fs=" + p.get("fs") +
+        " autoplay=" + p.get("autoplay") + " mute=" + p.get("mute"));
     return document.getElementById("yt");
   }
 
@@ -279,6 +319,13 @@
       chip("yt-controls", "run", "your turn");
       ask("yt-controls", true);
     },
+    "autoplay-fs": function () {
+      embed({ autoplay: 1, fs: 1 });
+      hint.className = "on";
+      hint.textContent = "Should start on its own (muted). Then tap the expand icon.";
+      chip("autoplay-fs", "run", "your turn");
+      ask("autoplay-fs", true);
+    },
     "pseudo": function () { stage.classList.add("pseudo"); record("pseudo", true, "CSS only — not real fullscreen"); },
     "reset": function () { embed(); chip("pseudo","", "untested"); log("reset"); }
   };
@@ -287,6 +334,9 @@
     var ansBtn = e.target.closest("[data-answer]");
     if (ansBtn) {
       var parts = ansBtn.dataset.answer.split(":");
+      if (parts[1] === "noauto") { results["autoplay-fs"] = "noauto"; chip("autoplay-fs", "fail", "no autoplay");
+                                   log("autoplay-fs: did not autoplay"); ask("autoplay-fs", false); verdict();
+                                   hint.className = ""; return; }
       record(parts[0], parts[1] === "pass", "you reported it");
       hint.className = "";
       return;
