@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Player</title>
+<!--
+  A real page, not a test harness. Thumbnail -> tap -> it plays -> fullscreen works.
+
+  Everything here follows from what the iPhone actually reported:
+
+  - iOS has no element-level fullscreen at all (fullscreenEnabled false,
+    requestFullscreen and webkitRequestFullscreen both absent). So a custom
+    expand button on a YouTube iframe cannot ever work. There isn't one here.
+  - YouTube's *own* expand control does work, because YouTube calls
+    webkitEnterFullscreen on its own <video> from inside the iframe. So we pass
+    fs=1 and let it draw that control. (gallery.js currently does the opposite.)
+  - Autoplay on iOS is only allowed muted and inline, so: playsinline=1,
+    autoplay=1, mute=1. Sound is one tap away, via the button below the video.
+
+  playsinline=0 would also give fullscreen, by handing off to the iOS player —
+  but it cannot autoplay, so it is not used here.
+-->
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 20px 16px 60px;
+    background: #0d0d10; color: #e8e8ea;
+    font: 16px/1.55 system-ui, -apple-system, sans-serif;
+    max-width: 780px; margin-inline: auto;
+  }
+  h1 { font-size: 20px; margin: 0 0 6px; }
+  p.sub { margin: 0 0 20px; color: #8a8a94; font-size: 14px; }
+
+  .player {
+    position: relative; width: 100%; aspect-ratio: 16 / 9;
+    background: #000; border-radius: 12px; overflow: hidden;
+    box-shadow: 0 8px 30px rgb(0 0 0 / 45%);
+  }
+  .player.portrait { aspect-ratio: 9 / 16; max-height: 78dvh; margin-inline: auto; width: auto; }
+  .player iframe { width: 100%; height: 100%; border: 0; display: block; }
+
+  .thumb {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    padding: 0; border: 0; background: #000; cursor: pointer; display: block;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .thumb::after {
+    content: ""; position: absolute; inset: 0;
+    background: radial-gradient(circle at center, rgb(0 0 0 / 15%), rgb(0 0 0 / 45%));
+  }
+  .thumb svg {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    width: clamp(56px, 18%, 84px); height: auto; z-index: 1;
+    filter: drop-shadow(0 2px 14px rgb(0 0 0 / 70%));
+    transition: transform .18s ease;
+  }
+  .thumb:active svg { transform: translate(-50%, -50%) scale(.94); }
+
+  .bar { display: flex; align-items: center; gap: 10px; margin-top: 12px; min-height: 44px; }
+  #sound {
+    display: none; align-items: center; gap: 7px;
+    min-height: 44px; padding: 0 16px;
+    border: 1px solid #3a3a44; border-radius: 999px;
+    background: #1d1d24; color: #fff;
+    font: 600 14px/1 system-ui, sans-serif; cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  #sound.on { display: inline-flex; }
+  #sound:active { background: #2c2c36; }
+  .note { color: #7a7a84; font-size: 13px; }
+</style>
+</head>
+<body>
+
+<h1 id="title">Player</h1>
+<p class="sub">Tap the thumbnail. It should start playing on its own, and the expand
+control in the player's bottom-right should go properly fullscreen.</p>
+
+<div class="player" id="player">
+  <button class="thumb" id="thumb" aria-label="Play video">
+    <img id="poster" alt="">
+    <svg viewBox="0 0 68 48" aria-hidden="true">
+      <path fill="#f00" d="M66.5 7.7a8 8 0 0 0-5.6-5.7C55.8.6 34 .6 34 .6s-21.8 0-26.9 1.4a8 8 0 0 0-5.6 5.7A84 84 0 0 0 .1 24a84 84 0 0 0 1.4 16.3 8 8 0 0 0 5.6 5.6C12.2 47.4 34 47.4 34 47.4s21.8 0 26.9-1.5a8 8 0 0 0 5.6-5.6A84 84 0 0 0 68 24a84 84 0 0 0-1.5-16.3z"/>
+      <path fill="#fff" d="M45 24 27 14v20z"/>
+    </svg>
+  </button>
+</div>
+
+<div class="bar">
+  <button id="sound">🔇 Tap for sound</button>
+  <span class="note" id="note"></span>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  var q        = new URLSearchParams(location.search);
+  var VIDEO    = (q.get("v") || "n92QxOXHpaI").replace(/[^\w-]/g, "");
+  var PORTRAIT = q.get("portrait") === "1";
+
+  var player = document.getElementById("player");
+  var thumb  = document.getElementById("thumb");
+  var sound  = document.getElementById("sound");
+  var note   = document.getElementById("note");
+  var frame  = null;
+
+  if (PORTRAIT) player.classList.add("portrait");
+  document.getElementById("poster").src =
+    "https://i.ytimg.com/vi/" + VIDEO + "/maxresdefault.jpg";
+
+  thumb.addEventListener("click", function () {
+    // mute=1 is not a preference, it is the price of autoplay on a phone.
+    // playsinline=1 keeps it in the page; fs=1 leaves YouTube's own expand
+    // control on screen, which is the only thing that can go fullscreen on iOS.
+    var p = new URLSearchParams({
+      autoplay: "1", mute: "1", playsinline: "1",
+      fs: "1", rel: "0", enablejsapi: "1", origin: location.origin
+    });
+    frame = document.createElement("iframe");
+    frame.src = "https://www.youtube.com/embed/" + VIDEO + "?" + p;
+    frame.title = "Video";
+    frame.setAttribute("allow", "autoplay; encrypted-media; fullscreen; picture-in-picture");
+    frame.setAttribute("allowfullscreen", "");
+    frame.setAttribute("webkitallowfullscreen", "");
+    thumb.replaceWith(frame);
+    sound.classList.add("on");
+    note.textContent = "Expand is bottom-right in the player.";
+  });
+
+  // No API script needed — the embed accepts commands over postMessage.
+  sound.addEventListener("click", function () {
+    if (!frame) return;
+    frame.contentWindow.postMessage(
+      JSON.stringify({ event: "command", func: "unMute", args: [] }), "*");
+    frame.contentWindow.postMessage(
+      JSON.stringify({ event: "command", func: "setVolume", args: [100] }), "*");
+    sound.classList.remove("on");
+    note.textContent = "Sound on.";
+  });
+})();
+</script>
+</body>
+</html>
