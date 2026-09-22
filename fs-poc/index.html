@@ -3,222 +3,384 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Fullscreen PoC — one YouTube video</title>
+<title>Fullscreen PoC</title>
 <!--
-  Deliberately self-contained: no Jekyll front matter (so this file is copied
-  verbatim), no build step, no shared CSS or JS. One video, one question —
-  which of these actually goes fullscreen on your phone?
+  Self-contained on purpose: no front matter, so Jekyll copies it verbatim.
+  Nothing here is shared with the gallery, so a result can't be contaminated.
 
-  Everything logs to the panel on the page, because there is no console to read
-  on an iPhone.
+  Rewritten to state a verdict rather than dump instrumentation. Each test says
+  what success looks like before you tap it, detects the outcome where it can,
+  and asks you where it can't.
 -->
 <style>
   :root { color-scheme: dark; }
   * { box-sizing: border-box; }
-  body {
-    margin: 0; padding: 12px;
-    background: #101014; color: #e8e8ea;
-    font: 15px/1.45 system-ui, -apple-system, sans-serif;
-  }
-  h1 { font-size: 17px; margin: 0 0 4px; }
-  p.sub { margin: 0 0 14px; color: #9a9aa2; font-size: 13px; }
+  body { margin:0; padding:12px 12px 40px; background:#101014; color:#e8e8ea;
+         font:15px/1.5 system-ui,-apple-system,sans-serif; }
+  h1 { font-size:18px; margin:0 0 10px; }
+  h2 { font-size:13px; text-transform:uppercase; letter-spacing:.06em;
+       color:#8a8a94; margin:22px 0 8px; }
 
-  #stage { position: relative; background: #000; aspect-ratio: 16 / 9; width: 100%; }
-  #stage.tall { aspect-ratio: 9 / 16; max-height: 70vh; margin-inline: auto; }
-  #stage iframe, #stage video { width: 100%; height: 100%; border: 0; display: block; }
+  #verdict { padding:12px; border-radius:10px; background:#17171d;
+             border:1px solid #2e2e38; margin-bottom:14px; }
+  #verdict b { display:block; font-size:15px; margin-bottom:4px; }
+  #verdict span { color:#a8a8b2; font-size:13.5px; }
 
-  /* Approach F: no API at all, just cover the viewport. */
-  #stage.pseudo {
-    position: fixed; inset: 0; z-index: 99; aspect-ratio: auto;
-    max-height: none; width: 100vw; height: 100dvh; background: #000;
-  }
-  #exitPseudo { display: none; position: fixed; top: 10px; right: 10px; z-index: 100; }
-  #stage.pseudo ~ #exitPseudo { display: block; }
+  #stage { position:relative; background:#000; aspect-ratio:16/9; width:100%; border-radius:8px; overflow:hidden; }
+  #stage iframe, #stage video { width:100%; height:100%; border:0; display:block; }
+  #stage.pseudo { position:fixed; inset:0; z-index:99; aspect-ratio:auto;
+                  width:100vw; height:100dvh; border-radius:0; }
+  #hint { display:none; position:absolute; inset:auto 0 0 0; padding:10px;
+          background:rgba(0,0,0,.82); font-size:14px; text-align:center; }
+  #hint.on { display:block; }
+  #exitPseudo { display:none; position:fixed; top:calc(env(safe-area-inset-top) + 8px); right:10px; z-index:100; min-width:0; }
+  #stage.pseudo ~ #exitPseudo { display:block; }
 
-  .row { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
-  button {
-    flex: 1 1 auto; min-width: 150px; min-height: 48px;
-    padding: 10px 12px; border: 1px solid #3a3a44; border-radius: 10px;
-    background: #1d1d24; color: #fff; font: 600 14px/1.25 system-ui, sans-serif;
-    text-align: left; cursor: pointer;
-  }
-  button:active { background: #2a2a34; }
-  button small { display: block; font-weight: 400; color: #9a9aa2; margin-top: 2px; }
+  .test { display:flex; align-items:flex-start; gap:10px; padding:10px 0;
+          border-bottom:1px solid #22222a; }
+  .test > div { flex:1; min-width:0; }
+  .test .what { font-size:13px; color:#8a8a94; margin-top:3px; }
+  .chip { flex:0 0 auto; align-self:center; font-size:12px; font-weight:600;
+          padding:4px 8px; border-radius:999px; background:#26262e; color:#9a9aa2; white-space:nowrap; }
+  .chip.pass { background:#12341f; color:#6ee787; }
+  .chip.fail { background:#3a1518; color:#ff7b72; }
+  .chip.run  { background:#33290f; color:#e3b341; }
 
-  table { border-collapse: collapse; width: 100%; font-size: 13px; margin-top: 6px; }
-  td { padding: 3px 6px; border-bottom: 1px solid #26262e; vertical-align: top; }
-  td:first-child { color: #9a9aa2; white-space: nowrap; }
-  .yes { color: #6ee787; } .no { color: #ff7b72; }
+  button { min-height:46px; padding:9px 12px; border:1px solid #3a3a44;
+           border-radius:9px; background:#1d1d24; color:#fff;
+           font:600 14px/1.25 system-ui,sans-serif; cursor:pointer; }
+  button:active { background:#2c2c36; }
+  .ask { margin-top:7px; display:none; gap:6px; }
+  .ask.on { display:flex; }
+  .ask button { min-height:38px; padding:6px 14px; font-size:13px; }
 
-  #log {
-    margin-top: 10px; padding: 8px; height: 190px; overflow: auto;
-    background: #08080b; border: 1px solid #26262e; border-radius: 8px;
-    font: 12px/1.4 ui-monospace, Menlo, monospace; white-space: pre-wrap;
-  }
-  h2 { font-size: 14px; margin: 18px 0 4px; color: #c9c9d1; }
+  #log { margin-top:8px; padding:8px; height:150px; overflow:auto; background:#08080b;
+         border:1px solid #26262e; border-radius:8px;
+         font:11.5px/1.4 ui-monospace,Menlo,monospace; white-space:pre-wrap; color:#9a9aa2; }
+  details { margin-top:14px; } summary { cursor:pointer; color:#8a8a94; font-size:13px; }
+  table { border-collapse:collapse; width:100%; font-size:12.5px; margin-top:6px; }
+  td { padding:3px 6px; border-bottom:1px solid #26262e; }
+  td:first-child { color:#8a8a94; } .yes{color:#6ee787} .no{color:#ff7b72}
 </style>
 </head>
 <body>
 
-<h1>Fullscreen PoC — one YouTube video</h1>
-<p class="sub">Tap each button and watch the log. Add <code>?v=VIDEO_ID</code> to try another video, <code>&amp;tall=1</code> for a portrait one.</p>
+<h1>Fullscreen PoC</h1>
 
-<div id="stage"></div>
+<div id="verdict">
+  <b id="vTitle">Start with test 1.</b>
+  <span id="vBody">It decides what the rest mean.</span>
+  <button id="copyBtn" style="margin-top:10px;width:100%">📋 Copy report</button>
+</div>
+
+<div id="stage"><div id="hint"></div></div>
 <button id="exitPseudo">Exit</button>
 
-<h2>Try to go fullscreen</h2>
-<div class="row">
-  <button data-try="api-wrapper">A · Fullscreen API on the wrapper<small>requestFullscreen() on the div</small></button>
-  <button data-try="api-iframe">B · Fullscreen API on the iframe<small>requestFullscreen() on the embed itself</small></button>
-  <button data-try="webkit-wrapper">C · Prefixed webkit on the wrapper<small>webkitRequestFullscreen()</small></button>
-</div>
-<div class="row">
-  <button data-try="no-playsinline">D · Reload embed without playsinline<small>iOS should hand it to the system player — press play after</small></button>
-  <button data-try="yt-controls">E · Let YouTube draw its own button<small>reloads with fs=1, then use the player's control</small></button>
-  <button data-try="pseudo">F · No API — just cover the viewport<small>CSS only; always works, but it is not real fullscreen</small></button>
-</div>
-<div class="row">
-  <button data-try="html5-video">G · Control: a plain &lt;video&gt;, not YouTube<small>webkitEnterFullscreen() — proves whether iOS will fullscreen anything here</small></button>
-  <button data-try="reset">↺ Reset to the normal embed</button>
+<h2>1 · Can this browser fullscreen anything at all?</h2>
+<div class="test">
+  <div>
+    <button data-try="html5-video">Fullscreen a plain video</button>
+    <div class="what">Not YouTube — a 6&nbsp;s clip served from this site.
+      <b>Success:</b> it fills the screen with iOS's own player.
+      If even this fails, no YouTube trick will work either.</div>
+  </div><span class="chip" data-chip="html5-video">untested</span>
 </div>
 
-<h2>What this browser reports</h2>
-<table id="caps"></table>
+<h2>2 · Can it fullscreen the YouTube player?</h2>
+<div class="test">
+  <div><button data-try="api-wrapper">Fullscreen API on the wrapper</button>
+    <div class="what"><b>Success:</b> the video fills the screen. Expected to fail on iOS.</div></div>
+  <span class="chip" data-chip="api-wrapper">untested</span>
+</div>
+<div class="test">
+  <div><button data-try="api-iframe">Fullscreen API on the iframe</button>
+    <div class="what"><b>Success:</b> same. Expected to fail on iOS.</div></div>
+  <span class="chip" data-chip="api-iframe">untested</span>
+</div>
 
-<h2>Log</h2>
-<div id="log"></div>
+<h2>3 · Workarounds</h2>
+<div class="test">
+  <div>
+    <button data-try="no-playsinline">Hand off to the iOS player</button>
+    <div class="what">Reloads the embed <i>without</i> <code>playsinline</code>, then you press play.
+      <b>Success:</b> tapping play opens iOS's own fullscreen player instead of playing in the box.
+      This is the one that would actually fix /led.</div>
+    <div class="ask" data-ask="no-playsinline">
+      <button data-answer="no-playsinline:pass">It went fullscreen</button>
+      <button data-answer="no-playsinline:fail">It played in the box</button>
+    </div>
+  </div><span class="chip" data-chip="no-playsinline">untested</span>
+</div>
+<div class="test">
+  <div>
+    <button data-try="yt-controls">YouTube's own button</button>
+    <div class="what">Reloads with <code>fs=1</code>. <b>Success:</b> an expand icon appears in the
+      player's bottom-right. YouTube hides it when it detects the browser can't comply —
+      so "no button" is itself the answer.</div>
+    <div class="ask" data-ask="yt-controls">
+      <button data-answer="yt-controls:pass">I see an expand icon</button>
+      <button data-answer="yt-controls:fail">No expand icon</button>
+    </div>
+  </div><span class="chip" data-chip="yt-controls">untested</span>
+</div>
+<div class="test">
+  <div><button data-try="pseudo">Just cover the screen (CSS)</button>
+    <div class="what">No API. Always works, but it is not real fullscreen —
+      no rotation, no system controls. The fallback if everything above fails.</div></div>
+  <span class="chip" data-chip="pseudo">untested</span>
+</div>
+
+<div class="test" style="border:0">
+  <div><button data-try="reset">↺ Reset</button></div>
+</div>
+
+<details open>
+  <summary>Log &amp; what this browser reports</summary>
+  <button id="copyBtn2" style="margin:8px 0;width:100%">📋 Copy report</button>
+  <div id="log"></div>
+  <table id="caps"></table>
+</details>
 
 <script>
 (function () {
   "use strict";
+  var params = new URLSearchParams(location.search);
+  var VIDEO  = (params.get("v") || "n92QxOXHpaI").replace(/[^\w-]/g, "");
+  var stage  = document.getElementById("stage");
+  var hint   = document.getElementById("hint");
+  var logEl  = document.getElementById("log");
+  var results = {};
+  var pending = null;   // test awaiting an auto-detected fullscreen event
 
-  var params  = new URLSearchParams(location.search);
-  var VIDEO   = (params.get("v") || "n92QxOXHpaI").replace(/[^\w-]/g, "");
-  var TALL    = params.get("tall") === "1";
-  var stage   = document.getElementById("stage");
-  var logEl   = document.getElementById("log");
-  if (TALL) stage.classList.add("tall");
-
-  function log(msg) {
-    var t = new Date().toISOString().slice(11, 19);
-    logEl.textContent += "[" + t + "] " + msg + "\n";
+  function log(m) {
+    logEl.textContent += "[" + new Date().toISOString().slice(11,19) + "] " + m + "\n";
     logEl.scrollTop = logEl.scrollHeight;
   }
+  function chip(name, state, text) {
+    var el = document.querySelector('[data-chip="' + name + '"]');
+    if (!el) return;
+    el.className = "chip" + (state ? " " + state : "");
+    el.textContent = text;
+  }
+  function ask(name, on) {
+    var el = document.querySelector('[data-ask="' + name + '"]');
+    if (el) el.classList.toggle("on", !!on);
+  }
+  function record(name, pass, why) {
+    results[name] = pass;
+    chip(name, pass ? "pass" : "fail", pass ? "works" : "no");
+    log(name + ": " + (pass ? "PASS" : "FAIL") + (why ? " — " + why : ""));
+    ask(name, false);
+    verdict();
+  }
 
-  // ---- capability report ---------------------------------------------------
-  var el = document.createElement("div");
-  var vid = document.createElement("video");
+  function verdict() {
+    var t = document.getElementById("vTitle"), b = document.getElementById("vBody");
+    if (results["html5-video"] === false) {
+      t.textContent = "This browser will not fullscreen anything.";
+      b.textContent = "Even a plain video refused, so no YouTube approach can work. The CSS cover is the only option.";
+      return;
+    }
+    if (results["api-wrapper"] || results["api-iframe"]) {
+      t.textContent = "The Fullscreen API works here.";
+      b.textContent = "The expand button can just call requestFullscreen(). This is not an iPhone.";
+      return;
+    }
+    if (results["no-playsinline"]) {
+      t.textContent = "Answer: hand off to the iOS player.";
+      b.textContent = "Dropping playsinline is what gives you real fullscreen. That is what /led's expand button should do.";
+      return;
+    }
+    if (results["html5-video"] && results["no-playsinline"] === false) {
+      t.textContent = "iOS fullscreens video, but not the YouTube iframe.";
+      b.textContent = "A plain <video> works while the embed does not — so the handoff is being blocked, not fullscreen itself. Send me the log.";
+      return;
+    }
+    if (results["html5-video"]) {
+      t.textContent = "Good — fullscreen works for a real video.";
+      b.textContent = "Now try test 3, the iOS handoff. That is the one that matters for /led.";
+      return;
+    }
+    t.textContent = "Start with test 1.";
+    b.textContent = "It decides what the rest mean.";
+  }
+
+  // ---- embeds ---------------------------------------------------------------
+  function embed(o) {
+    o = o || {};
+    stage.classList.remove("pseudo");
+    hint.className = "";
+    var p = new URLSearchParams({
+      playsinline: o.playsinline === 0 ? "0" : "1",
+      fs: o.fs === 0 ? "0" : "1", rel: "0", autoplay: "0"
+    });
+    stage.innerHTML = '<iframe id="yt" src="https://www.youtube.com/embed/' + VIDEO + "?" + p +
+      '" title="YouTube" allow="autoplay; encrypted-media; fullscreen; picture-in-picture"' +
+      ' allowfullscreen webkitallowfullscreen></iframe>';
+    stage.appendChild(hint);
+    log("embed playsinline=" + p.get("playsinline") + " fs=" + p.get("fs"));
+    return document.getElementById("yt");
+  }
+
+  function tryFs(node, name, label) {
+    var fn = node.requestFullscreen || node.webkitRequestFullscreen;
+    if (!fn) { record(name, false, "no requestFullscreen on this element"); return; }
+    pending = name;
+    chip(name, "run", "trying…");
+    try {
+      var r = fn.call(node);
+      if (r && r.then) {
+        r.then(function(){ log(label + " resolved"); })
+         .catch(function(e){ pending = null; record(name, false, "refused: " + (e && e.message || e)); });
+      }
+      // No promise (old webkit): the fullscreenchange event decides. If nothing
+      // arrives shortly, treat it as a refusal rather than leaving it spinning.
+      setTimeout(function () {
+        if (pending === name) { pending = null; record(name, false, "no fullscreenchange event — silently refused"); }
+      }, 1500);
+    } catch (e) { pending = null; record(name, false, "threw: " + (e && e.message || e)); }
+  }
+
+  var actions = {
+    "html5-video": function () {
+      stage.classList.remove("pseudo");
+      stage.innerHTML = '<video id="v5" playsinline controls preload="auto" src="test.mp4"></video>';
+      stage.appendChild(hint);
+      var v = document.getElementById("v5");
+      v.addEventListener("error", function () { record("html5-video", false, "the clip itself failed to load"); });
+      // iOS signals its own player with these, not fullscreenchange.
+      v.addEventListener("webkitbeginfullscreen", function () { pending = null; record("html5-video", true, "iOS player opened"); });
+      v.addEventListener("loadedmetadata", function () { log("clip ready (" + v.videoWidth + "x" + v.videoHeight + ")"); });
+      pending = "html5-video";
+      chip("html5-video", "run", "trying…");
+      var go = function () {
+        if (v.webkitEnterFullscreen) { try { v.webkitEnterFullscreen(); log("called webkitEnterFullscreen"); } catch (e) { record("html5-video", false, "threw: " + e.message); } }
+        else tryFs(v, "html5-video", "video.requestFullscreen");
+        setTimeout(function () {
+          if (pending === "html5-video") { pending = null; record("html5-video", false, "no fullscreen event — refused"); }
+        }, 2000);
+      };
+      if (v.readyState >= 1) go(); else v.addEventListener("loadedmetadata", go, { once: true });
+    },
+    "api-wrapper": function () { embed(); tryFs(stage, "api-wrapper", "wrapper.requestFullscreen"); },
+    "api-iframe":  function () { var f = embed(); tryFs(f, "api-iframe", "iframe.requestFullscreen"); },
+    "no-playsinline": function () {
+      embed({ playsinline: 0 });
+      hint.className = "on";
+      hint.textContent = "▶ Now press play in the video above.";
+      chip("no-playsinline", "run", "your turn");
+      ask("no-playsinline", true);
+      log("playsinline dropped — waiting for you to press play");
+    },
+    "yt-controls": function () {
+      embed({ fs: 1 });
+      hint.className = "on";
+      hint.textContent = "Look bottom-right of the player for an expand icon.";
+      chip("yt-controls", "run", "your turn");
+      ask("yt-controls", true);
+    },
+    "pseudo": function () { stage.classList.add("pseudo"); record("pseudo", true, "CSS only — not real fullscreen"); },
+    "reset": function () { embed(); chip("pseudo","", "untested"); log("reset"); }
+  };
+
+  document.addEventListener("click", function (e) {
+    var ansBtn = e.target.closest("[data-answer]");
+    if (ansBtn) {
+      var parts = ansBtn.dataset.answer.split(":");
+      record(parts[0], parts[1] === "pass", "you reported it");
+      hint.className = "";
+      return;
+    }
+    var btn = e.target.closest("[data-try]");
+    if (!btn) return;
+    log("--- " + btn.dataset.try + " ---");
+    (actions[btn.dataset.try] || function(){})();
+  });
+
+  document.getElementById("exitPseudo").addEventListener("click", function () {
+    stage.classList.remove("pseudo"); log("CSS cover off");
+  });
+
+  ["fullscreenchange","webkitfullscreenchange"].forEach(function (evt) {
+    document.addEventListener(evt, function () {
+      var el = document.fullscreenElement || document.webkitFullscreenElement;
+      log(evt + " -> " + (el ? "ENTERED " + el.tagName : "exited"));
+      if (el && pending) { record(pending, true, "entered fullscreen"); pending = null; }
+    });
+  });
+  ["fullscreenerror","webkitfullscreenerror"].forEach(function (evt) {
+    document.addEventListener(evt, function () {
+      log(evt + " — browser refused");
+      if (pending) { record(pending, false, "fullscreenerror"); pending = null; }
+    });
+  });
+
+  // ---- capability table -----------------------------------------------------
+  var el = document.createElement("div"), v = document.createElement("video");
   var caps = {
     "document.fullscreenEnabled": !!document.fullscreenEnabled,
     "webkitFullscreenEnabled": !!document.webkitFullscreenEnabled,
     "Element.requestFullscreen": typeof el.requestFullscreen === "function",
     "Element.webkitRequestFullscreen": typeof el.webkitRequestFullscreen === "function",
-    "video.webkitEnterFullscreen": typeof vid.webkitEnterFullscreen === "function",
-    "video.webkitSupportsFullscreen": "webkitSupportsFullscreen" in vid,
+    "video.webkitEnterFullscreen": typeof v.webkitEnterFullscreen === "function",
     "maxTouchPoints": navigator.maxTouchPoints,
+    "screen": screen.width + "x" + screen.height,
     "userAgent": navigator.userAgent
   };
   var rows = "";
   for (var k in caps) {
-    var v = caps[k];
-    var cls = v === true ? "yes" : v === false ? "no" : "";
-    rows += "<tr><td>" + k + "</td><td class='" + cls + "'>" + v + "</td></tr>";
+    var val = caps[k];
+    rows += "<tr><td>" + k + "</td><td class='" + (val === true ? "yes" : val === false ? "no" : "") + "'>" + val + "</td></tr>";
   }
   document.getElementById("caps").innerHTML = rows;
-  log("caps: fullscreenEnabled=" + caps["document.fullscreenEnabled"] +
-      " webkitEnterFullscreen=" + caps["video.webkitEnterFullscreen"]);
 
-  // ---- the embed -----------------------------------------------------------
-  function embed(opts) {
-    opts = opts || {};
-    stage.classList.remove("pseudo");
-    var p = new URLSearchParams({
-      playsinline: opts.playsinline === 0 ? "0" : "1",
-      fs: opts.fs === 0 ? "0" : "1",
-      rel: "0",
-      autoplay: opts.autoplay ? "1" : "0",
-      mute: opts.autoplay ? "1" : "0"
-    });
-    stage.innerHTML =
-      '<iframe id="yt" src="https://www.youtube.com/embed/' + VIDEO + "?" + p.toString() + '"' +
-      ' title="YouTube video" allow="autoplay; encrypted-media; fullscreen; picture-in-picture"' +
-      ' allowfullscreen webkitallowfullscreen mozallowfullscreen></iframe>';
-    log("embed: playsinline=" + p.get("playsinline") + " fs=" + p.get("fs") + " autoplay=" + p.get("autoplay"));
-    return document.getElementById("yt");
+  // ---- copy the whole report -----------------------------------------------
+  function report() {
+    var lines = ["=== fullscreen PoC report ===", "url: " + location.href, ""];
+    lines.push("-- capabilities --");
+    for (var k in caps) lines.push("  " + k + ": " + caps[k]);
+    lines.push("", "-- results --");
+    var any = false;
+    for (var r in results) { any = true; lines.push("  " + r + ": " + (results[r] ? "PASS" : "FAIL")); }
+    if (!any) lines.push("  (nothing tested yet)");
+    lines.push("", "-- verdict --");
+    lines.push("  " + document.getElementById("vTitle").textContent);
+    lines.push("  " + document.getElementById("vBody").textContent);
+    lines.push("", "-- log --", logEl.textContent.replace(/\n$/, ""));
+    return lines.join("\n");
   }
+
+  function copyReport(btn) {
+    var text = report(), done = function () {
+      var old = btn.textContent; btn.textContent = "✅ Copied";
+      setTimeout(function () { btn.textContent = old; }, 1600);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done, function () { fallback(text, btn, done); });
+    } else fallback(text, btn, done);
+  }
+  function fallback(text, btn, done) {
+    // iOS needs a real, visible, editable field for execCommand to take.
+    var ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.cssText = "position:fixed;top:0;left:0;width:1px;height:1px;opacity:0";
+    document.body.appendChild(ta);
+    ta.focus(); ta.setSelectionRange(0, text.length);
+    var ok = false;
+    try { ok = document.execCommand("copy"); } catch (e) { ok = false; }
+    document.body.removeChild(ta);
+    if (ok) done();
+    else { btn.textContent = "⚠️ Select the log and copy manually"; log("clipboard blocked"); }
+  }
+  ["copyBtn", "copyBtn2"].forEach(function (id) {
+    var b = document.getElementById(id);
+    if (b) b.addEventListener("click", function () { copyReport(b); });
+  });
+
   embed();
-
-  function request(node, label) {
-    var fn = node.requestFullscreen || node.webkitRequestFullscreen || node.webkitEnterFullscreen;
-    if (!fn) { log(label + ": no method on this element — nothing to call"); return; }
-    try {
-      var r = fn.call(node);
-      if (r && typeof r.then === "function") {
-        r.then(function () { log(label + ": RESOLVED — should be fullscreen now"); })
-         .catch(function (e) { log(label + ": REJECTED — " + (e && e.message ? e.message : e)); });
-      } else {
-        log(label + ": called (returned nothing — no promise to confirm with)");
-      }
-    } catch (e) {
-      log(label + ": THREW — " + (e && e.message ? e.message : e));
-    }
-  }
-
-  var actions = {
-    "api-wrapper":     function () { request(stage, "A wrapper.requestFullscreen"); },
-    "api-iframe":      function () { request(document.getElementById("yt") || stage, "B iframe.requestFullscreen"); },
-    "webkit-wrapper":  function () {
-      if (!stage.webkitRequestFullscreen) { log("C: webkitRequestFullscreen does not exist here"); return; }
-      request(stage, "C wrapper.webkitRequestFullscreen");
-    },
-    "no-playsinline":  function () {
-      embed({ playsinline: 0 });
-      log("D: reloaded without playsinline. Press play — iOS should open its own player.");
-    },
-    "yt-controls":     function () { embed({ fs: 1 }); log("E: reloaded with fs=1. Use YouTube's own expand control."); },
-    "pseudo":          function () { stage.classList.add("pseudo"); log("F: CSS cover on. Not real fullscreen — no rotation, no system chrome."); },
-    "html5-video":     function () {
-      stage.classList.remove("pseudo");
-      stage.innerHTML =
-        '<video id="v5" playsinline controls preload="metadata"' +
-        ' src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"></video>';
-      var v = document.getElementById("v5");
-      log("G: plain <video> loaded. Calling webkitEnterFullscreen...");
-      if (v.webkitEnterFullscreen) {
-        // iOS refuses until there is enough data to present a player.
-        if (v.readyState >= 1) request(v, "G video.webkitEnterFullscreen");
-        else v.addEventListener("loadedmetadata", function () { request(v, "G video.webkitEnterFullscreen (after metadata)"); }, { once: true });
-      } else {
-        request(v, "G video.requestFullscreen");
-      }
-    },
-    "reset":           function () { embed(); }
-  };
-
-  document.addEventListener("click", function (e) {
-    var btn = e.target.closest("[data-try]");
-    if (!btn) return;
-    var name = btn.dataset.try;
-    log("--- tap: " + name + " ---");
-    (actions[name] || function () { log("no such action"); })();
-  });
-
-  document.getElementById("exitPseudo").addEventListener("click", function () {
-    stage.classList.remove("pseudo");
-    log("F: CSS cover off.");
-  });
-
-  ["fullscreenchange", "webkitfullscreenchange"].forEach(function (evt) {
-    document.addEventListener(evt, function () {
-      var fsEl = document.fullscreenElement || document.webkitFullscreenElement;
-      log("EVENT " + evt + " -> " + (fsEl ? "entered (" + fsEl.tagName + ")" : "exited"));
-    });
-  });
-  ["fullscreenerror", "webkitfullscreenerror"].forEach(function (evt) {
-    document.addEventListener(evt, function () { log("EVENT " + evt + " — the browser refused"); });
-  });
-
-  log("ready. video=" + VIDEO + (TALL ? " (portrait frame)" : ""));
+  log("ready — video=" + VIDEO);
+  log("fullscreenEnabled=" + caps["document.fullscreenEnabled"] +
+      " webkitEnterFullscreen=" + caps["video.webkitEnterFullscreen"]);
 })();
 </script>
 </body>
