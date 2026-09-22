@@ -46,6 +46,7 @@
   const WATCHDOG_MS = 6000; // still not playing -> stop spinning, offer YouTube
   const SWIPE_PX = 40; // horizontal travel that counts as a page turn
   const TAP_PX = 10; // travel under which a touch is a tap, not a drag
+  const TAP_ZONE = 0.3; // outer third of the stage, either side: page back/forward
   const LETTERBOX_MIN = 64; // empty band under the slide worth moving nav into
   const PLAYING = 1; // YT.PlayerState.PLAYING, needed before YT has loaded
 
@@ -62,6 +63,17 @@
 
   const isTouch =
     navigator.maxTouchPoints > 0 || window.matchMedia("(pointer: coarse)").matches;
+
+  /*
+   * Not a UA sniff: iPhone (Safari and every other browser there, since they
+   * are all WKWebView) reports no Fullscreen API at all, while iPad and desktop
+   * Safari report the webkit-prefixed one. Where this is false, *nobody* can go
+   * fullscreen — including the YouTube player inside the iframe, whose own
+   * fullscreen button is then a dead control we are better off not drawing.
+   */
+  const canNativeFullscreen = !!(
+    document.fullscreenEnabled || document.webkitFullscreenEnabled
+  );
 
   /* ------------------------------------------------------------- masonry --- */
 
@@ -277,6 +289,7 @@
   let ready = false;
   let opener = null;
   let timers = [];
+  let swallowClick = false; // a swipe's trailing click is not a tap
 
   const clearTimers = () => { timers.forEach(clearTimeout); timers = []; };
   const later = (fn, ms) => timers.push(setTimeout(fn, ms));
@@ -351,6 +364,7 @@
         playsinline: 1, // without this iOS hijacks into its own fullscreen
         rel: 0,
         controls: YT_CONTROLS,
+        fs: canNativeFullscreen ? 1 : 0, // don't draw a button that cannot work
         iv_load_policy: 3, // no annotation cards over the video
         modestbranding: 1,
         enablejsapi: 1,
@@ -513,6 +527,7 @@
    */
   function positionNav() {
     if (root.hidden) return;
+    syncExpanded(); // the rotation decision depends on this slide's aspect
     const sb = stage.getBoundingClientRect();
     const lb = slide.getBoundingClientRect();
     const band = sb.bottom - lb.bottom;
@@ -524,12 +539,31 @@
     );
   }
 
+  /*
+   * What "expanded" can mean depends on the platform, so decide it here rather
+   * than in the stylesheet. Where there is a real Fullscreen API this is just
+   * bookkeeping. Where there is not — an iPhone — the lightbox already covers
+   * the viewport, so hiding the rail buys almost nothing and the button reads
+   * as broken. The one real gain left is turning the picture sideways: a 16:9
+   * video on an upright phone goes from 390x219 to 390x693, which is the whole
+   * point of tapping expand. Only landscape media on an upright screen, and
+   * only while expanded.
+   */
   function syncExpanded() {
     const on =
       !!(document.fullscreenElement || document.webkitFullscreenElement) ||
       root.classList.contains("is-expanded");
     fsBtn.setAttribute("aria-pressed", String(on));
     fsBtn.setAttribute("aria-label", on ? "Exit fullscreen" : "Expand to fullscreen");
+
+    const box = stage.getBoundingClientRect();
+    const [w, h] = (slide.style.getPropertyValue("--aspect") || "16 / 9")
+      .split("/")
+      .map((n) => parseFloat(n) || 1);
+    root.classList.toggle(
+      "is-rotated",
+      on && !canNativeFullscreen && box.height > box.width && w > h,
+    );
   }
 
   /*
@@ -578,11 +612,12 @@
   }
 
   /*
-   * A tap on the media. If it is muted only because autoplay forced it, this
-   * tap is the user gesture that can lift that — take the sound off mute rather
-   * than pausing. Otherwise it is play/pause, the thing a tap on a video means.
+   * A tap in the middle of the media. If it is muted only because autoplay
+   * forced it, this tap is the user gesture that can lift that — take the sound
+   * off mute rather than pausing. Otherwise it is play/pause, the thing a tap
+   * on a video means.
    */
-  function tapMedia() {
+  function tapCentre() {
     if (slide.dataset.kind !== "video" || !player) return;
     let muted = false;
     try { muted = !!player.isMuted?.(); } catch { muted = false; }
@@ -594,6 +629,9 @@
   }
 
   root.addEventListener("click", (e) => {
+    if (swallowClick) { swallowClick = false; return; } // tail of a swipe
+    if (e.target.closest("a[href]")) return; // the fallback link out
+
     const thumb = e.target.closest("[data-thumb]");
     if (thumb) return show(Number(thumb.dataset.index));
 
@@ -604,6 +642,27 @@
     if (action === "fullscreen") return toggleFullscreen();
     if (action === "thumbs") { setRailVisible(rail.hidden); return positionNav(); }
     if (action === "unmute") return turnSoundOn();
+
+    /*
+     * Tap zones, on touch only. The outer third either side pages the carousel
+     * wherever it lands — over the video, over the letterbox band, over the
+     * arrows' own corner of the screen — so paging never depends on finding a
+     * 48px button. The middle third is play/pause over the media, and close
+     * over the backdrop, which is what a tap there meant before.
+     */
+    if (isTouch) {
+      const r = stage.getBoundingClientRect();
+      const inStage =
+        e.clientX >= r.left && e.clientX <= r.right &&
+        e.clientY >= r.top && e.clientY <= r.bottom;
+      if (inStage) {
+        const x = (e.clientX - r.left) / r.width;
+        if (x < TAP_ZONE) return go(-1);
+        if (x > 1 - TAP_ZONE) return go(1);
+        if (e.target.closest("[data-gesture]")) return tapCentre();
+      }
+    }
+
     // Backdrop only: a tap on the media itself belongs to the player.
     if (e.target === stage || e.target === root) close();
   });
@@ -640,12 +699,21 @@
     const dy = (p?.clientY ?? swipe.y) - swipe.y;
     const { onMedia } = swipe;
     swipe = null;
-    if (Math.abs(dx) >= SWIPE_PX && Math.abs(dx) > Math.abs(dy)) return go(dx < 0 ? 1 : -1);
-    if (onMedia && Math.abs(dx) < TAP_PX && Math.abs(dy) < TAP_PX) tapMedia();
+    if (Math.abs(dx) >= SWIPE_PX && Math.abs(dx) > Math.abs(dy)) {
+      swallowClick = true;
+      setTimeout(() => { swallowClick = false; }, 400);
+      return go(dx < 0 ? 1 : -1);
+    }
+    // A tap is handled on the click that follows it, where the
+    // co-ordinates decide between paging and play/pause.
   }, { passive: true });
 
   // Anything that changes the slide's box — rail toggled, rotation, an image
-  // resolving its real aspect — moves the arrows with it.
+  // resolving its real aspect — moves the arrows with it. ResizeObserver
+  // reports the *layout* box, which a rotation does not change, so the sideways
+  // mode needs the transition's end as well or the arrows settle where the
+  // picture used to be.
+  slide.addEventListener("transitionend", positionNav);
   if (window.ResizeObserver) new ResizeObserver(() => positionNav()).observe(slide);
   window.addEventListener("resize", positionNav);
   window.addEventListener("orientationchange", positionNav);

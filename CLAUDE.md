@@ -105,10 +105,30 @@ document — the swipe handler simply never fired. That transparent sheet takes
 the touch instead. It stops 56px short of the bottom so YouTube's own controls
 stay reachable, and it is only present on touch pointers.
 
-**"Expand" on an iPhone is a CSS class, not the Fullscreen API.** iOS Safari
-has no `Element.requestFullscreen` — only `<video>` goes fullscreen natively.
-`toggleFullscreen()` falls back to `.is-expanded`, which *must* have stylesheet
-rules behind it; it didn't, which is exactly why the button looked dead.
+**There is no fullscreen on an iPhone, for anyone.** Every browser there is
+WKWebView, and none of them exposes the Fullscreen API — not to us, and not to
+the YouTube player inside the iframe, whose own fullscreen button is therefore
+dead too (`fs` is set to 0 wherever `document.fullscreenEnabled` is false, so
+it isn't drawn). Feature-test it; don't sniff the UA, because iPad *does* have
+the webkit-prefixed API. `toggleFullscreen()` falls back to `.is-expanded`,
+which must have stylesheet rules behind it; at first it didn't, which is why
+the button looked dead, and then it only hid the rail — on a phone the lightbox
+already covers the viewport, so that is not what anyone tapped for. It now also
+adds `.is-rotated` for landscape media on an upright screen, turning the slide
+90° so a 16:9 video goes from 390x219 to 390x693. The `--aspect` sizing formula
+is reused with the container's axes swapped, so nothing is stretched.
+
+*If true iOS fullscreen ever matters more than the inline gallery:* dropping
+`playsinline` makes iOS hijack playback into its own fullscreen player. That is
+almost certainly what the pre-rewrite page did, and it is incompatible with a
+swipeable lightbox — every video would leave the page to play.
+
+**Nav is by tap zone, not just by button.** The outer 30% of the stage either
+side pages the carousel wherever the tap lands: over the video, over the
+letterbox band, anywhere. The middle is play/pause over the media and close
+over the backdrop. It runs on `click` (the browser synthesises one from a tap)
+rather than on `touchend`, so a swipe sets `swallowClick` to stop its trailing
+click being read as a tap.
 
 ## CI
 

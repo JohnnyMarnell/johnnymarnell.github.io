@@ -355,13 +355,17 @@ test.describe("phone gestures and chrome", () => {
     await expect(slide(page)).toHaveAttribute("data-index", "0");
   });
 
-  test("a tap on the video pauses it", async ({ page }) => {
+  test("a real finger tap in the middle of the video pauses it", async ({ page }) => {
+    // A genuine touchscreen tap, not a synthetic mouse click: the handler runs
+    // on the click the browser synthesises from the touch, so this is the path
+    // that has to work on the actual phone.
     await stubYouTube(page);
     await page.goto("/led/");
     await open(page);
     await expect(slide(page)).toHaveAttribute("data-state", "playing", { timeout: 8000 });
 
-    await touchDrag(page.locator("[data-gesture]"), { x: 200, y: 400 }, { x: 202, y: 401 });
+    const box = await slide(page).boundingBox();
+    await page.touchscreen.tap(box.x + box.width / 2, box.y + box.height / 2);
     await expect
       .poll(async () => (await ytCalls(page)).some((c) => c.fn === "pauseVideo"))
       .toBe(true);
@@ -426,5 +430,101 @@ test.describe("phone gestures and chrome", () => {
     await page.locator('[data-action="fullscreen"]').click();
     await expect(lightbox(page)).not.toHaveClass(/is-expanded/);
     await expect(page.locator("[data-rail]")).toBeVisible();
+  });
+});
+
+test.describe("phone: tap zones and pseudo-fullscreen", () => {
+  test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+
+  // Every browser on an iPhone is WKWebView, and none of them has the
+  // Fullscreen API — not for us and not for the player inside the iframe.
+  const noFullscreenApi = (page) =>
+    page.addInitScript(() => {
+      for (const k of ["fullscreenEnabled", "webkitFullscreenEnabled"]) {
+        Object.defineProperty(document, k, { get: () => false, configurable: true });
+      }
+      delete Element.prototype.requestFullscreen;
+      delete Element.prototype.webkitRequestFullscreen;
+    });
+
+  test("tapping the sides pages the carousel, over the media and beside it", async ({ page }) => {
+    await stubYouTube(page);
+    await page.goto("/led/");
+    await open(page, '[data-tile][data-orientation="landscape"]');
+    await expect(slide(page)).toHaveAttribute("data-state", "playing", { timeout: 8000 });
+
+    const start = Number(await slide(page).getAttribute("data-index"));
+    const stage = page.locator("[data-stage]");
+    const [box, media] = await Promise.all([stage.boundingBox(), slide(page).boundingBox()]);
+    const overMedia = media.y + media.height / 2 - box.y;
+
+    await stage.click({ position: { x: box.width * 0.9, y: overMedia } });
+    await expect(slide(page)).toHaveAttribute("data-index", String(start + 1));
+    await stage.click({ position: { x: box.width * 0.1, y: overMedia } });
+    await expect(slide(page)).toHaveAttribute("data-index", String(start));
+
+    // The letterbox band, where a tap used to mean "close".
+    const beside = media.y + media.height + 20 - box.y;
+    await stage.click({ position: { x: box.width * 0.9, y: beside } });
+    await expect(slide(page)).toHaveAttribute("data-index", String(start + 1));
+    await expect(lightbox(page)).toBeVisible();
+  });
+
+  test("the middle is still play/pause, and the backdrop still closes", async ({ page }) => {
+    await stubYouTube(page);
+    await page.goto("/led/");
+    await open(page, '[data-tile][data-orientation="landscape"]');
+    await expect(slide(page)).toHaveAttribute("data-state", "playing", { timeout: 8000 });
+
+    const stage = page.locator("[data-stage]");
+    const [box, media] = await Promise.all([stage.boundingBox(), slide(page).boundingBox()]);
+    await stage.click({ position: { x: box.width / 2, y: media.y + media.height / 2 - box.y } });
+    await expect
+      .poll(async () => (await ytCalls(page)).some((c) => c.fn === "pauseVideo"))
+      .toBe(true);
+
+    await stage.click({ position: { x: box.width / 2, y: media.y + media.height + 20 - box.y } });
+    await expect(lightbox(page)).toBeHidden();
+  });
+
+  test("YouTube's own fullscreen button is not drawn where it cannot work", async ({ page }) => {
+    await noFullscreenApi(page);
+    await stubYouTube(page);
+    await page.goto("/led/");
+    await open(page);
+    // A visible control that does nothing is worse than no control.
+    await expect(page.locator("[data-player] iframe")).toHaveAttribute("src", /(\?|&)fs=0(&|$)/);
+  });
+
+  test("expand turns a landscape video sideways when that is the only gain left", async ({ page }) => {
+    await noFullscreenApi(page);
+    await stubYouTube(page);
+    await page.goto("/led/");
+    await open(page, '[data-tile][data-orientation="landscape"]');
+    await expect(slide(page)).toHaveAttribute("data-state", "playing", { timeout: 8000 });
+    const before = await slide(page).boundingBox();
+
+    await page.locator('[data-action="fullscreen"]').click();
+    await expect(lightbox(page)).toHaveClass(/is-rotated/);
+    await page.waitForTimeout(400); // the rotate transition
+
+    const after = await slide(page).boundingBox();
+    expect(after.height, "sideways should more than double the picture").toBeGreaterThan(
+      before.height * 2,
+    );
+    expect(after.height, "and it should now be taller than it is wide").toBeGreaterThan(after.width);
+
+    await page.locator('[data-action="fullscreen"]').click();
+    await expect(lightbox(page)).not.toHaveClass(/is-rotated/);
+  });
+
+  test("a portrait video is left alone — there is nothing to gain by turning it", async ({ page }) => {
+    await noFullscreenApi(page);
+    await stubYouTube(page);
+    await page.goto("/led/");
+    await open(page);
+    await page.locator('[data-action="fullscreen"]').click();
+    await expect(lightbox(page)).toHaveClass(/is-expanded/);
+    await expect(lightbox(page)).not.toHaveClass(/is-rotated/);
   });
 });
