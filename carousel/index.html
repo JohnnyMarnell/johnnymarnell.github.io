@@ -7,16 +7,32 @@
 <!--
   The whole approach in one self-contained page. No debug output.
 
-  The rule that shapes it: nothing is drawn on top of the video. YouTube's own
-  expand control is the only thing that can reach real fullscreen on an iPhone
-  (it calls webkitEnterFullscreen on its own <video>, which we cannot do across
-  origins), and it lives in the player's bottom-right. Any transparent sheet
-  over the player to catch swipes, or any arrow floating over the frame, also
-  swallows the tap meant for that control. So the arrows and the thumbnails sit
-  in a footer, below the video, where they cannot intercept anything.
+  Three things it is built around:
 
-  Autoplay is muted because that is the only autoplay iOS permits; sound is one
-  tap, over postMessage, so no API script is needed.
+  1. NOTHING IS DRAWN ON TOP OF THE VIDEO. YouTube's own expand control is the
+     only thing that reaches real fullscreen on an iPhone (it calls
+     webkitEnterFullscreen on its own <video>, which we cannot do across
+     origins), and it sits in the player's bottom-right. Any sheet over the
+     player to catch swipes, or any arrow floating over the frame, swallows the
+     tap meant for it. So the arrows and thumbnails live in a footer.
+
+     Swipe is still available — but only on the margins around the frame, never
+     over it. On a phone a 16:9 video leaves most of the screen empty, so there
+     is plenty to swipe on, and nothing is intercepted.
+
+  2. ONE PLAYER, NOT ONE PER SLIDE. An embed the visitor unmutes keeps that
+     permission for the life of that player, so rebuilding the iframe per slide
+     silently re-mutes everything after the first. Navigation goes through the
+     player instead, which is why the IFrame API is loaded.
+
+  3. THE GALLERY IS A YOUTUBE PLAYLIST. Once the player is fullscreen the page
+     is gone — no overlay of ours can reach it, and we cannot even see when it
+     exits, because the <video> is inside a cross-origin iframe. But YouTube
+     draws its own next/prev controls for a playlist, and those work *in*
+     fullscreen. So the whole set is handed over as one, and our footer drives
+     the same playlist rather than swapping the video out from under it.
+
+  Autoplay is muted because that is the only autoplay iOS permits.
 -->
 <style>
   :root { color-scheme: dark; }
@@ -55,8 +71,9 @@
 
   /* The video. Container units, so it fits whatever the header and footer
      leave behind without hard-coding their heights. */
+  /* touch-action lets us read horizontal swipes here without killing scroll. */
   .stage { container-type: size; display: grid; place-items: center;
-           min-height: 0; padding: 0 8px; }
+           min-height: 0; padding: 0 8px; touch-action: pan-y; }
   .frame { aspect-ratio: var(--a, 16 / 9);
            width: min(100cqw, calc(100cqh * var(--a, 16 / 9)));
            max-width: 100cqw; max-height: 100cqh;
@@ -104,7 +121,7 @@ should go properly fullscreen.</p>
     </button>
   </div>
 
-  <div class="stage"><div class="frame" id="frame"></div></div>
+  <div class="stage" id="stage"><div class="frame" id="frame"><div id="mount"></div></div></div>
 
   <div class="foot">
     <button class="btn" id="prev" aria-label="Previous">
@@ -118,6 +135,7 @@ should go properly fullscreen.</p>
   </div>
 </div>
 
+<script src="https://www.youtube.com/iframe_api"></script>
 <script>
 (function () {
   "use strict";
@@ -130,9 +148,11 @@ should go properly fullscreen.</p>
 
   var grid = document.getElementById("grid"), box = document.getElementById("box");
   var frame = document.getElementById("frame"), rail = document.getElementById("rail");
+  var stage = document.getElementById("stage");
   var caption = document.getElementById("caption"), sound = document.getElementById("sound");
   var PLAY = '<svg viewBox="0 0 68 48" aria-hidden="true"><path fill="#f00" d="M66.5 7.7a8 8 0 0 0-5.6-5.7C55.8.6 34 .6 34 .6s-21.8 0-26.9 1.4a8 8 0 0 0-5.6 5.7A84 84 0 0 0 .1 24a84 84 0 0 0 1.4 16.3 8 8 0 0 0 5.6 5.6C12.2 47.4 34 47.4 34 47.4s21.8 0 26.9-1.5a8 8 0 0 0 5.6-5.6A84 84 0 0 0 68 24a84 84 0 0 0-1.5-16.3z"/><path fill="#fff" d="M45 24 27 14v20z"/></svg>';
-  var index = -1;
+
+  var player = null, ready = false, index = 0, wanted = 0, apiReady = false;
 
   ITEMS.forEach(function (it, i) {
     var b = document.createElement("button");
@@ -145,57 +165,104 @@ should go properly fullscreen.</p>
     t.style.setProperty("--ta", it.a);
     t.innerHTML = '<img src="' + poster(it.id) + '" alt="">';
     t.setAttribute("aria-label", it.title);
-    t.addEventListener("click", function () { show(i); });
+    t.addEventListener("click", function () { go(i); });
     rail.appendChild(t);
   });
   var thumbs = [].slice.call(rail.children);
 
-  function show(i) {
-    index = (i + ITEMS.length) % ITEMS.length;
-    var it = ITEMS[index];
-    frame.style.setProperty("--a", it.a);
-    caption.textContent = it.title;
-
-    // mute=1 buys the autoplay; playsinline=1 keeps it on the page;
-    // fs=1 leaves YouTube's expand control on screen, which is the fullscreen.
-    var p = new URLSearchParams({
-      autoplay: "1", mute: "1", playsinline: "1", fs: "1", rel: "0",
-      enablejsapi: "1", origin: location.origin
-    });
-    frame.innerHTML =
-      '<iframe src="https://www.youtube.com/embed/' + it.id + "?" + p + '"' +
-      ' title="' + it.title + '" allow="autoplay; encrypted-media; fullscreen; picture-in-picture"' +
-      ' allowfullscreen webkitallowfullscreen></iframe>';
-
-    sound.textContent = "🔇";
+  function paint(i) {
+    index = i;
+    frame.style.setProperty("--a", ITEMS[i].a);
+    caption.textContent = ITEMS[i].title;
     thumbs.forEach(function (t, n) {
-      if (n === index) t.setAttribute("aria-current", "true"); else t.removeAttribute("aria-current");
+      if (n === i) t.setAttribute("aria-current", "true"); else t.removeAttribute("aria-current");
     });
   }
 
-  function open(i) { box.classList.add("open"); document.body.classList.add("locked"); show(i); }
+  window.onYouTubeIframeAPIReady = function () { apiReady = true; if (box.classList.contains("open")) build(); };
+
+  function build() {
+    if (player || !apiReady) return;
+    player = new YT.Player("mount", {
+      videoId: ITEMS[0].id,
+      playerVars: {
+        autoplay: 1, mute: 1, playsinline: 1, fs: 1, rel: 0,
+        // The rest of the gallery, so YouTube's own fullscreen UI can page
+        // through it without us.
+        playlist: ITEMS.slice(1).map(function (i) { return i.id; }).join(","),
+        origin: location.origin
+      },
+      events: {
+        onReady: function (e) {
+          ready = true;
+          e.target.playVideo();
+          if (wanted) e.target.playVideoAt(wanted);
+        },
+        onStateChange: function () {
+          // Follow the player, whoever moved it — our footer, or YouTube's own
+          // next/prev from inside fullscreen.
+          var at = -1;
+          try { at = player.getPlaylistIndex(); } catch (err) { at = -1; }
+          if (at >= 0 && at < ITEMS.length && at !== index) paint(at);
+          syncSound();
+        }
+      }
+    });
+  }
+
+  function syncSound() {
+    var muted = true;
+    try { muted = player.isMuted(); } catch (e) { muted = true; }
+    sound.textContent = muted ? "🔇" : "🔊";
+  }
+
+  // Same player throughout, so an unmute survives the move.
+  function go(i) {
+    wanted = (i + ITEMS.length) % ITEMS.length;
+    paint(wanted);
+    if (player && ready) { try { player.playVideoAt(wanted); } catch (e) {} }
+  }
+
+  function open(i) {
+    box.classList.add("open"); document.body.classList.add("locked");
+    wanted = i; paint(i);
+    if (!player) build(); else if (ready) { try { player.playVideoAt(i); } catch (e) {} }
+  }
   function close() {
     box.classList.remove("open"); document.body.classList.remove("locked");
-    frame.innerHTML = ""; index = -1;
+    if (player) { try { player.pauseVideo(); } catch (e) {} }
   }
 
-  document.getElementById("prev").addEventListener("click", function () { show(index - 1); });
-  document.getElementById("next").addEventListener("click", function () { show(index + 1); });
+  document.getElementById("prev").addEventListener("click", function () { go(index - 1); });
+  document.getElementById("next").addEventListener("click", function () { go(index + 1); });
   document.getElementById("close").addEventListener("click", close);
 
   sound.addEventListener("click", function () {
-    var f = frame.querySelector("iframe");
-    if (!f) return;
-    f.contentWindow.postMessage(JSON.stringify({ event: "command", func: "unMute", args: [] }), "*");
-    f.contentWindow.postMessage(JSON.stringify({ event: "command", func: "setVolume", args: [100] }), "*");
-    sound.textContent = "🔊";
+    if (!player || !ready) return;
+    try {
+      if (player.isMuted()) { player.unMute(); player.setVolume(100); }
+      else player.mute();
+    } catch (e) {}
+    syncSound();
   });
+
+  // Swipe on the margins only. The frame itself is never covered.
+  var x0 = null;
+  stage.addEventListener("touchstart", function (e) {
+    x0 = e.changedTouches[0].clientX;
+  }, { passive: true });
+  stage.addEventListener("touchend", function (e) {
+    if (x0 === null) return;
+    var dx = e.changedTouches[0].clientX - x0;
+    x0 = null;
+    if (Math.abs(dx) >= 45) go(index + (dx < 0 ? 1 : -1));
+  }, { passive: true });
 
   document.addEventListener("keydown", function (e) {
     if (!box.classList.contains("open")) return;
     if (e.key === "Escape") close();
-    else if (e.key === "ArrowRight") show(index + 1);
-    else if (e.key === "ArrowLeft") show(index - 1);
+    else if (e.key === "ArrowRight") go(index + 1);
+    else if (e.key === "ArrowLeft") go(index - 1);
   });
 })();
 </script>
