@@ -15,6 +15,12 @@
  *   - swiping did nothing, because an <iframe> is a separate browsing context
  *     and the touch never reached this document at all.
  * Each of those is handled explicitly below.
+ *
+ * It also owns the gallery's URL. Opening an item rewrites the address bar to
+ * /led/?m=<slug>, and that URL reopens the same view from cold — see the
+ * "deep links" section. The tiles' own href is deliberately left pointing at
+ * YouTube / the full-size image, because with JS off that link is the only
+ * thing that works; the share button is what hands over a ?m= link.
  */
 (() => {
   "use strict";
@@ -50,6 +56,15 @@
   const LETTERBOX_MIN = 64; // empty band under the slide worth moving nav into
   const PLAYING = 1; // YT.PlayerState.PLAYING, needed before YT has loaded
 
+  /*
+   * Deep links. `m` is what gets written; `v` and `item` are only read, because
+   * they are what someone hand-editing a link is likely to reach for.
+   */
+  const URL_PARAM = "m";
+  const URL_PARAM_ALIASES = ["v", "item"];
+  const IMAGE_DWELL_MS = 5000; // a photo's turn, while the carousel self-drives
+  const SCROLL_SETTLE_MS = 1400; // give up waiting for a smooth scroll to land
+
   const gallery = document.querySelector("[data-gallery], .gallery");
   if (!gallery) return;
 
@@ -60,6 +75,91 @@
   // so stamp it on the way past — it is what the lightbox indexes by, and the
   // only way to tell "item 3" from "third in the DOM" when debugging.
   tiles.forEach((tile, i) => { tile.dataset.order = String(i); });
+
+  /* ---------------------------------------------------------- deep links --- */
+
+  /*
+   * Every tile gets a slug, which is what a shareable URL carries: the
+   * YouTube id for a video, the filename stem for a photo (both set by the
+   * includes). Index would have been less code and a worse link — inserting a
+   * tile at the top would silently repoint every URL ever shared.
+   *
+   * Uniqueness is settled here rather than in Liquid, which cannot see a
+   * tile's siblings. The walk is in authored order, so the suffixes are stable
+   * for a given page; a tile with no slug at all falls back to its position.
+   *
+   * Case is kept as authored and only folded for matching, because a YouTube
+   * id is case-sensitive to the eye: ?m=Kg0VKvDbvkU is recognisably the video
+   * in a pasted link, ?m=kg0vkvdbvku is noise.
+   */
+  const slugs = (() => {
+    const seen = new Map();
+    return tiles.map((tile, i) => {
+      const base = (tile.dataset.slug || "").trim() || String(i + 1);
+      const key = base.toLowerCase();
+      const n = (seen.get(key) || 0) + 1;
+      seen.set(key, n);
+      const slug = n === 1 ? base : `${base}-${n}`;
+      tile.dataset.slug = slug;
+      return slug;
+    });
+  })();
+
+  /*
+   * Forgiving on the way in, because these arrive pasted and retyped: a slug,
+   * a bare YouTube id (which survives a photo-style slug being renamed), or a
+   * 1-based position. Anything else resolves to nothing at all — opening item
+   * 1 for a URL that asked for something else is worse than ignoring it.
+   */
+  function indexForSlug(raw) {
+    const want = String(raw ?? "").trim().toLowerCase();
+    if (!want) return -1;
+
+    const bySlug = slugs.findIndex((slug) => slug.toLowerCase() === want);
+    if (bySlug >= 0) return bySlug;
+
+    const byId = tiles.findIndex((t) => (t.dataset.yt || "").toLowerCase() === want);
+    if (byId >= 0) return byId;
+
+    if (/^\d+$/.test(want)) {
+      const n = Number(want) - 1;
+      if (n >= 0 && n < tiles.length) return n;
+    }
+    return -1;
+  }
+
+  const urlParams = () => new URL(location.href).searchParams;
+
+  function paramIndex() {
+    const q = urlParams();
+    for (const key of [URL_PARAM, ...URL_PARAM_ALIASES]) {
+      const i = indexForSlug(q.get(key));
+      if (i >= 0) return i;
+    }
+    return -1;
+  }
+
+  // Absolute, and with the aliases dropped so a link never carries two answers.
+  function urlFor(i) {
+    const u = new URL(location.href);
+    URL_PARAM_ALIASES.forEach((k) => u.searchParams.delete(k));
+    u.searchParams.set(URL_PARAM, slugs[i]);
+    u.hash = "";
+    return u.href;
+  }
+
+  function urlWithoutItem() {
+    const u = new URL(location.href);
+    [URL_PARAM, ...URL_PARAM_ALIASES].forEach((k) => u.searchParams.delete(k));
+    u.hash = "";
+    return u.href;
+  }
+
+  // history can throw on a file:// page or in a sandboxed frame, and a dead
+  // address bar is not a reason for the gallery itself to stop working.
+  const tryHistory = (fn) => { try { fn(); } catch { /* no session history */ } };
+
+  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   const isTouch =
     navigator.maxTouchPoints > 0 || window.matchMedia("(pointer: coarse)").matches;
@@ -210,6 +310,7 @@
     expand: icon('<path d="M8 3H5a2 2 0 0 0-2 2v3m13-5h3a2 2 0 0 1 2 2v3m0 6v3a2 2 0 0 1-2 2h-3m-5 0H5a2 2 0 0 1-2-2v-3"/>'),
     thumbs: icon('<rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>'),
     sound: icon('<path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>'),
+    link: icon('<path d="M10 13a5 5 0 0 0 7.07 0l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.07 0l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>'),
   };
 
   const root = document.createElement("div");
@@ -239,9 +340,11 @@
         <span class="lightbox__counter" data-counter></span>
         <span class="lightbox__spacer"></span>
         <button class="lightbox__btn" data-action="unmute" aria-label="Turn sound on" hidden>${ICONS.sound}</button>
+        <button class="lightbox__btn" data-action="share" aria-label="Copy a link to this item">${ICONS.link}</button>
         <button class="lightbox__btn" data-action="thumbs" aria-label="Toggle thumbnails" aria-pressed="true">${ICONS.thumbs}</button>
         <button class="lightbox__btn" data-action="fullscreen" aria-label="Expand to fullscreen" aria-pressed="false">${ICONS.expand}</button>
       </div>
+      <p class="lightbox__toast" data-toast role="status" aria-live="polite"><span data-toast-text></span></p>
       <p class="lightbox__caption" data-caption></p>
     </div>
     <div class="lightbox__rail" data-rail role="tablist" aria-label="Gallery thumbnails"></div>`;
@@ -267,6 +370,8 @@
    * do not sit on top of each other.
    */
   const fallbackNote = $("[data-fallback-note]");
+  const toastBox = $("[data-toast]");
+  const toastText = $("[data-toast-text]");
   const rail = $("[data-rail]");
 
   /*
@@ -309,6 +414,18 @@
   let timers = [];
   let playerInline = true; // false once expand has handed it to iOS's player
   let swallowClick = false; // a swipe's trailing click is not a tap
+
+  /*
+   * autoCycle: the carousel is currently driving itself, so a photo takes its
+   * turn and moves on. It is set by an auto-advance and by arriving on a
+   * shared link, and cleared the moment the visitor steers — otherwise opening
+   * a photo to look at it would walk off after IMAGE_DWELL_MS.
+   *
+   * pushedHistory: we own the entry the address bar is sitting on, so closing
+   * should go back to it rather than rewrite it.
+   */
+  let autoCycle = false;
+  let pushedHistory = false;
 
   const clearTimers = () => { timers.forEach(clearTimeout); timers = []; };
   const later = (fn, ms) => timers.push(setTimeout(fn, ms));
@@ -413,7 +530,7 @@
             setState("playing");
             syncMuteButton();
           } else if (data === YT.PlayerState.ENDED) {
-            advance();
+            advance("video");
           }
         },
         onError: ({ data }) => {
@@ -475,7 +592,17 @@
     index = (i + tiles.length) % tiles.length;
     const item = describe(tiles[index]);
     generation += 1;
+    const mine = generation;
     clearTimers();
+
+    /*
+     * The address bar always names the slide on screen. replaceState rather
+     * than pushState: one Back closes the viewer however deep into the set you
+     * are, instead of walking you back through thirteen items — which is the
+     * difference between a carousel that can auto-advance and one that buries
+     * the page you arrived from.
+     */
+    if (!root.hidden) tryHistory(() => history.replaceState({ lb: slugs[index] }, "", urlFor(index)));
 
     slide.style.setProperty("--aspect", item.aspect);
     slide.dataset.index = String(index);
@@ -502,17 +629,35 @@
       // Hold the player rather than destroying it — see mountVideo.
       try { player?.pauseVideo?.(); } catch { /* fine */ }
       unmuteBtn.hidden = true;
+
+      /*
+       * A photo has no "ended" of its own, so the cycle needs a clock — and it
+       * starts when the photo is actually on screen, not when the slide was
+       * asked for, or a slow file would get a fraction of its turn. A photo
+       * that never arrives still hands over, rather than stopping the show on
+       * a spinner.
+       */
+      const dwell = () => { if (autoCycle) later(() => advance("image"), IMAGE_DWELL_MS); };
+
       // Size the slide from the file's own dimensions — no build-time guess.
       const sized = () => {
+        // The poster element is shared across slides, so a load that lands
+        // after a swipe belongs to an image nobody is looking at any more.
+        if (mine !== generation) return;
         if (poster.naturalWidth && poster.naturalHeight) {
           slide.style.setProperty("--aspect", `${poster.naturalWidth} / ${poster.naturalHeight}`);
         }
         setState("playing");
         positionNav();
+        dwell();
       };
       if (poster.complete) sized();
       else poster.addEventListener("load", sized, { once: true });
-      later(() => { if (state() === "loading") setState("stalled"); }, WATCHDOG_MS);
+      later(() => {
+        if (state() !== "loading") return;
+        setState("stalled");
+        dwell();
+      }, WATCHDOG_MS);
       positionNav();
       return;
     }
@@ -520,34 +665,94 @@
     positionNav();
   }
 
-  const go = (delta) => show(index + delta);
+  // Every visitor-driven move: an arrow, a swipe, a tap zone. Taking the wheel
+  // stops the show, so the photo you just swiped to stays on screen.
+  const go = (delta) => { autoCycle = false; show(index + delta); };
 
-  // A finished video rolls into the next item, and the last wraps to the first
-  // (show() takes the index modulo the set).
-  function advance() {
-    if (root.hidden || slide.dataset.kind !== "video") return;
-    go(1);
+  /*
+   * The carousel moving itself on: a video that finished, or a photo that has
+   * had its dwell. The last item wraps to the first (show() takes the index
+   * modulo the set). `from` is the kind that asked, because a player can reach
+   * ENDED while a photo is on screen — it is paused, not destroyed, between
+   * video slides — and that must not advance anything.
+   */
+  function advance(from) {
+    if (root.hidden || slide.dataset.kind !== from) return;
+    autoCycle = true;
+    show(index + 1);
   }
 
-  function open(i) {
+  /*
+   * `cycle` starts the set playing itself through (a shared link should be a
+   * show, not a single slide). `fromHistory` means the address bar is already
+   * on the entry we want, so touching it again would be wrong.
+   */
+  function open(i, { cycle = false, fromHistory = false } = {}) {
     opener = tiles[i] ?? null;
+    autoCycle = cycle;
     root.hidden = false;
     document.body.classList.add("lightbox-open");
+
+    if (!fromHistory) {
+      tryHistory(() => {
+        /*
+         * Arriving on a ?m= link, the entry we are standing on is the item
+         * itself and there is nothing behind it but the referrer. Rewriting it
+         * to the bare gallery and pushing the item back on top gives Back the
+         * same meaning it has for a click — close the viewer, here are the
+         * tiles — while a reload still lands on the shared slide.
+         */
+        if (paramIndex() >= 0) history.replaceState({ lb: null }, "", urlWithoutItem());
+        history.pushState({ lb: slugs[i] }, "", urlFor(i));
+        pushedHistory = true;
+      });
+    }
+
     show(i);
     $('[data-action="close"]').focus({ preventScroll: true });
   }
 
-  function close() {
+  function close({ fromHistory = false } = {}) {
     teardownPlayer();
     setState("closed");
+    autoCycle = false;
     root.hidden = true;
     document.body.classList.remove("lightbox-open");
     if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
     root.classList.remove("is-expanded");
     syncExpanded();
+    hideToast();
+
+    // Pop our own entry if we put one there, so closing and reopening does not
+    // leave a trail. Ordering matters: root.hidden is already true above, so
+    // the popstate this fires sees a closed viewer and does nothing.
+    if (!fromHistory) {
+      if (pushedHistory) history.back();
+      else tryHistory(() => history.replaceState({ lb: null }, "", urlWithoutItem()));
+    }
+    pushedHistory = false;
+
     opener?.focus({ preventScroll: true });
     opener = null;
   }
+
+  /*
+   * Back and Forward. The URL is the single source of truth here: no item in
+   * it means the viewer should be shut, an item means it should be open on
+   * that one. Nothing in this handler writes history back.
+   */
+  window.addEventListener("popstate", () => {
+    const i = paramIndex();
+    if (i < 0) {
+      if (!root.hidden) close({ fromHistory: true });
+      return;
+    }
+    // We are standing on an entry carrying an item, which is one of ours, so
+    // the bare gallery is behind it — close() can pop back to it.
+    pushedHistory = true;
+    if (root.hidden) open(i, { cycle: true, fromHistory: true });
+    else if (i !== index) show(i);
+  });
 
   /* ----------------------------------------------------------- chrome --- */
 
@@ -639,6 +844,50 @@
 
   document.addEventListener("fullscreenchange", () => { syncExpanded(); positionNav(); });
 
+  /* ------------------------------------------------------- share the link --- */
+
+  let toastTimer = null;
+
+  // Its own timer, not later(): a confirmation should not be cancelled by the
+  // slide changing underneath it.
+  function toast(text) {
+    toastText.textContent = text;
+    toastBox.dataset.on = "";
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(hideToast, 2400);
+  }
+
+  function hideToast() {
+    clearTimeout(toastTimer);
+    delete toastBox.dataset.on;
+  }
+
+  /*
+   * The point of the URL being right. The share sheet where there is one (a
+   * phone), the clipboard otherwise — and if the clipboard is refused, say
+   * where the link is, because it is genuinely already in the address bar.
+   */
+  async function shareCurrent() {
+    const url = urlFor(index);
+    const title = describe(tiles[index]).caption || document.title;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({ title, url });
+        return;
+      } catch (err) {
+        // A dismissed sheet is not a failure to route around.
+        if (err?.name === "AbortError") return;
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      toast("Link copied");
+    } catch {
+      toast("This link is in the address bar");
+    }
+  }
+
   /* ------------------------------------------------------------- events --- */
 
   tiles.forEach((el, i) =>
@@ -679,7 +928,7 @@
     if (e.target.closest("a[href]")) return; // the fallback link out
 
     const thumb = e.target.closest("[data-thumb]");
-    if (thumb) return show(Number(thumb.dataset.index));
+    if (thumb) { autoCycle = false; return show(Number(thumb.dataset.index)); }
 
     const action = e.target.closest("[data-action]")?.dataset.action;
     if (action === "close") return close();
@@ -688,6 +937,7 @@
     if (action === "fullscreen") return toggleFullscreen();
     if (action === "thumbs") { setRailVisible(rail.hidden); return positionNav(); }
     if (action === "unmute") return turnSoundOn();
+    if (action === "share") { shareCurrent(); return; }
 
     /*
      * Tap zones, on touch only. The outer third either side pages the carousel
@@ -786,4 +1036,57 @@
       if (next) { img.dataset.posterFallback = chain.join("|"); img.src = next; }
     });
   });
+
+  /* ----------------------------------------------------- arriving by link --- */
+
+  /*
+   * Scroll the gallery into view, and resolve once it has actually stopped
+   * moving. There is no portable "the smooth scroll has finished" event —
+   * `scrollend` is recent and absent on Safari — so watch the position settle
+   * instead, with SCROLL_SETTLE_MS as the backstop so a browser that ignores
+   * `behavior: "smooth"` (or a scroll that cannot happen at all) still opens.
+   */
+  function scrollGalleryIntoView() {
+    return new Promise((resolve) => {
+      const top = Math.max(0, gallery.getBoundingClientRect().top + window.scrollY - 24);
+      if (reduceMotion || Math.abs(top - window.scrollY) < 8) {
+        window.scrollTo(0, top);
+        return resolve();
+      }
+      window.scrollTo({ top, behavior: "smooth" });
+
+      const started = performance.now();
+      let last = -1;
+      let still = 0;
+      const watch = () => {
+        const at = window.scrollY;
+        still = Math.abs(at - last) < 1 ? still + 1 : 0;
+        last = at;
+        if (still >= 3 || performance.now() - started > SCROLL_SETTLE_MS) return resolve();
+        requestAnimationFrame(watch);
+      };
+      requestAnimationFrame(watch);
+    });
+  }
+
+  /*
+   * A shared link. Start at the very top whatever the browser restored, so the
+   * page gets to introduce itself, then travel down to the tiles and open the
+   * item — which is a good deal more legible than materialising a black
+   * lightbox over a page the visitor has never seen.
+   *
+   * One frame of delay so the masonry columns above exist first; the scroll
+   * target is wrong before they do.
+   */
+  const linked = paramIndex();
+  if (linked >= 0) {
+    window.scrollTo(0, 0);
+    requestAnimationFrame(() => {
+      scrollGalleryIntoView().then(() => {
+        // Guard against the visitor having got there first — a click or a
+        // keypress during the scroll owns the viewer, not us.
+        if (root.hidden) open(linked, { cycle: true });
+      });
+    });
+  }
 })();

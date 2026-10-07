@@ -21,6 +21,10 @@
   Unknown parameters are reported via data-unknown-params and asserted empty by
   tests/led-masonry.spec.js, because `protrait=true` silently rendered a
   portrait video as landscape for months.
+
+  data-slug is the handle a shareable URL carries (/led/?m=<slug>, see
+  gallery.js). For a video the YouTube id already is one: stable, unique, and
+  recognisable in a pasted link.
 {%- endcomment -%}
 
 {%- assign known = "id,orientation,portrait,aspect,alt,duration" | split: "," -%}
@@ -61,6 +65,7 @@
 {%- assign base = "https://i.ytimg.com/vi/" | append: vid -%}
 
 <a class="tile" data-tile data-kind="video" data-yt="{{ vid }}"
+   data-slug="{{ vid }}"
    data-orientation="{{ orientation }}" data-aspect="{{ aspect }}"
    data-caption="{{ alt | escape }}"
    style="--media-aspect: {{ aspect | replace: ':', ' / ' }}"

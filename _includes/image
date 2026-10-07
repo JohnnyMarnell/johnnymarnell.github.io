@@ -15,6 +15,13 @@
   Failing that (an image added but not yet probed), the tile is marked
   data-orientation-auto and gallery.js corrects it from naturalWidth/
   naturalHeight once decoded — right, but one frame late.
+
+  data-slug is the handle a shareable URL carries (/led/?m=<slug>, see
+  gallery.js), derived from the filename: IMG_0328.HEIC.jpg -> img-0328. It is
+  therefore only as stable as the filename, which is the price of not making
+  the author write one by hand; gallery.js falls back to the tile index for a
+  slug it cannot resolve, so a renamed file degrades to "opens the gallery"
+  rather than to a broken page.
 {%- endcomment -%}
 
 {%- assign known = "src,orientation,portrait,aspect,alt" | split: "," -%}
@@ -48,6 +55,7 @@
      aria-label="Missing image: {{ include.src | escape }}"></a>
 {%- else -%}
   {%- assign alt = include.alt | default: "Photo" -%}
+  {%- assign img_slug = img_path | split: "/" | last | split: "." | first | downcase | replace: "_", "-" -%}
   {%- assign known_image = site.data.media.images[img_path] -%}
   {%- if include.orientation == "portrait" or include.portrait -%}
     {%- assign orientation = "portrait" -%}
@@ -68,6 +76,7 @@
   {%- endif -%}
 
 <a class="tile" data-tile data-kind="image"
+   data-slug="{{ img_slug }}"
    data-orientation="{{ orientation }}" data-aspect="{{ aspect }}"
    data-caption="{{ alt | escape }}"
    style="--media-aspect: {{ aspect | replace: ':', ' / ' }}"
