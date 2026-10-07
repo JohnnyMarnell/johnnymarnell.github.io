@@ -2,15 +2,19 @@
 #
 # Video orientation cannot be read from any endpoint a page can reach —
 # see the script's header. It is probed server-side and committed here.
+#
+# `poster` is which of YouTube's thumbnails actually exists for that id, and
+# its real pixel size: og:image for a share page points at it, and a preview
+# whose image 404s shows no picture at all.
 videos:
-  "C8sHgpCKFPA": { orientation: landscape, aspect: "16:9" }
-  "Kg0VKvDbvkU": { orientation: portrait, aspect: "9:16" }
-  "SzUIuTK63jA": { orientation: portrait, aspect: "9:16" }
-  "UL10vjc54Lw": { orientation: landscape, aspect: "16:9" }
-  "n92QxOXHpaI": { orientation: landscape, aspect: "16:9" }
-  "nLRTtxrm7z0": { orientation: portrait, aspect: "9:16" }
-  "qo0L7gmySvQ": { orientation: landscape, aspect: "16:9" }
-  "uXDbkIkoSk0": { orientation: portrait, aspect: "9:16" }
+  "C8sHgpCKFPA": { orientation: landscape, aspect: "16:9", poster: "maxresdefault.jpg", poster_width: 1280, poster_height: 720 }
+  "Kg0VKvDbvkU": { orientation: portrait, aspect: "9:16", poster: "maxresdefault.jpg", poster_width: 1280, poster_height: 720 }
+  "SzUIuTK63jA": { orientation: portrait, aspect: "9:16", poster: "maxresdefault.jpg", poster_width: 1280, poster_height: 720 }
+  "UL10vjc54Lw": { orientation: landscape, aspect: "16:9", poster: "maxresdefault.jpg", poster_width: 1280, poster_height: 720 }
+  "n92QxOXHpaI": { orientation: landscape, aspect: "16:9", poster: "maxresdefault.jpg", poster_width: 1280, poster_height: 720 }
+  "nLRTtxrm7z0": { orientation: portrait, aspect: "9:16", poster: "maxresdefault.jpg", poster_width: 1280, poster_height: 720 }
+  "qo0L7gmySvQ": { orientation: landscape, aspect: "16:9", poster: "maxresdefault.jpg", poster_width: 1280, poster_height: 720 }
+  "uXDbkIkoSk0": { orientation: portrait, aspect: "9:16", poster: "maxresdefault.jpg", poster_width: 1280, poster_height: 720 }
 images:
   "/img/IMG_0328.HEIC.jpg": { orientation: landscape, aspect: "4:3", width: 4032, height: 3024 }
   "/img/IMG_0488.HEIC.jpg": { orientation: landscape, aspect: "4:3", width: 4032, height: 3024 }

@@ -52,6 +52,7 @@ exclude:
   - playwright-report/
   - test-results/
   - tests/
+  - scripts/
   - justfile
   - Dockerfile
   - docker-compose.yaml
