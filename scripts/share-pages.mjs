@@ -149,7 +149,9 @@ async function makePreview(src, dest) {
   if (!RESIZER) {
     throw new Error(
       "no image resizer found — need one of magick, convert (ImageMagick), ffmpeg or sips.\n" +
-        "  macOS ships sips; ubuntu-latest ships ImageMagick; otherwise `brew install imagemagick`.",
+        "  macOS ships sips. Linux needs one installing — GitHub's ubuntu-latest\n" +
+        "  carries none of them, which is what .github/workflows/pages.yml's\n" +
+        "  `Image tooling` step is for. Otherwise: apt install imagemagick.",
     );
   }
   const info = await stat(src);

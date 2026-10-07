@@ -53,3 +53,53 @@
 - Docker - for Jupyter notebooks
 - TS types for event emitter, best practices? (idk them yet)
 - `ddestroy`, one of my opus's!
+
+
+### Some Music Shenanigan YouTubes
+
+NYC Burners at La Playa (actualmente), Rockaway:
+https://www.youtube.com/shorts/4xC0hBT2mNw
+
+
+NYC Christmas Caroling // Zum Schneider // sing-a-longs // Santacon:
+https://www.youtube.com/watch?v=GhM0HIMKzoA
+
+Sing-a-longs on a Dive Boat in Cozumel Mexico, custom Raspberry Pi:
+https://www.youtube.com/watch?v=KVO8QH8ydek
+
+Tour Road Jamage 1:
+https://www.youtube.com/watch?v=Py5IBPH-d_Q
+
+John `@claude` Van Jam // BLOAT GOATS // DUI // Portland, ME:
+https://www.youtube.com/shorts/_XOOLvhvo9g
+
+CK Swetts, Baby Loudenz, WhatsApp Video 2026 04 08 at 18 51 33:
+https://www.youtube.com/shorts/IvKbEfAIbB8
+
+Gothic Folly - Pixelblaze - 3D Audio Reactive:
+https://www.youtube.com/watch?v=JQJXC7wk6DY
+
+Lovely Day // CAMP 2026:
+https://www.youtube.com/shorts/k8yeQkOxc-M
+
+Deep Playa Bike Ride NYC 2026:
+https://www.youtube.com/watch?v=gSkmhUiG6Fs
+
+Live Looping - Andre's Brigantine - Custom Node.JS, Raspberry Pi, Reaper DAW:
+Valerie Amy Winehouse - after the party it's the hotel basement - wythe hotel williamsburg brooklyn:
+https://www.youtube.com/watch?v=LuSIDW9Rjbg
+
+midi guitar pickup orchestral patch guitar cat lasers going insane - Fishman Triple Play:
+https://www.youtube.com/watch?v=zNkmwI8Ubqs
+
+Cozumel - U2 With Or Without You - Dos Leches - Johnny and Gabo:
+https://www.youtube.com/watch?v=oqUGbYtdLEk
+
+PixelBlaze Gallery, Emulator, Sourcer, Tooling:
+https://www.youtube.com/watch?v=VYa1uQU_jgA
+
+Andres Brigantine Dave Johnny mobile Christmas:
+https://www.youtube.com/watch?v=3pULqbAXkP8
+
+Brown Eyed Girl - Raspberry Pi REAPER - CDMX - Parque Mexico:
+https://www.youtube.com/watch?v=6nxF5XSOLXI

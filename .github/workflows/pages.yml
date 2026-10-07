@@ -53,8 +53,13 @@ jobs:
           PAGES_REPO_NWO: ${{ github.repository }}
           JEKYLL_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # The other half of the build. ImageMagick is already on ubuntu-latest,
-      # which is what the photo previews are resized with.
+      # What the photo previews are resized with. Installed explicitly: it is
+      # not on ubuntu-latest any more, and the first deploy run died on exactly
+      # that.
+      - name: Image tooling
+        run: sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends imagemagick
+
+      # The other half of the build.
       - name: Share pages
         run: node scripts/share-pages.mjs
 
