@@ -59,6 +59,48 @@ where the real vertical frame sits, so plain `object-fit: cover` lands on it —
 no crop hackery needed. Those two ratios are also what the placement loop uses
 to predict heights, so it never reads back layout.
 
+## Deep links (`/led/?m=<slug>`)
+
+Opening an item rewrites the address bar; that URL reopens the same view from
+cold. The slug is the tile's `data-slug` — a video's YouTube id, a photo's
+filename stem (`IMG_0328.HEIC.jpg` -> `img-0328`), both emitted by the
+includes. Not the index: inserting a tile at the top would silently repoint
+every link ever shared. `gallery.js` settles duplicates (Liquid cannot see a
+tile's siblings) and keeps the authored case, folding it only to match, so a
+pasted `?m=Kg0VKvDbvkU` still reads as the video it is.
+
+**One `pushState` per opening, `replaceState` per slide.** A carousel that
+auto-advances would otherwise bury the page you arrived from under thirteen
+entries, and Back has to mean "close the viewer" however far in you walked.
+Arriving on a `?m=` link, `open()` rewrites that entry to the bare gallery and
+pushes the item back on top, so Back means the same thing there as after a
+click while a reload still lands on the shared slide. `popstate` treats the URL
+as the only truth and never writes history back.
+
+`?v=` and `?item=` are read as aliases and normalised away; a bare 1-based
+index works for hand-typed links. **An unrecognised value opens nothing** —
+silently showing item 1 for a link that asked for something else is a worse
+answer than ignoring it.
+
+The tiles' own `href` still points at YouTube / the full-size image, because
+with JS off that link is the only thing that works. The share button is what
+hands over a `?m=` link (`navigator.share`, else the clipboard).
+
+**A deep link scrolls in.** It starts at the top of the page whatever the
+browser restored, travels down to the gallery, and only then opens — a
+lightbox materialising over a page the visitor has never seen tells them
+nothing about where they are. There is no portable "smooth scroll finished"
+event (`scrollend` is absent on Safari), so it watches the position settle,
+with `SCROLL_SETTLE_MS` as the backstop; `prefers-reduced-motion` gets a jump.
+
+**Photos take a turn and move on, videos always did.** A video advancing on
+ENDED is old behaviour; the cycle used to stop dead at item 9 of 13, the first
+photo. `autoCycle` is the rule: set by an auto-advance and by arriving on a
+shared link, cleared by any arrow, swipe, tap-zone or thumbnail — so the show
+runs itself, and a photo you opened to look at stays put. The dwell is armed
+when the photo is actually on screen (or gave up loading), not when the slide
+was asked for.
+
 ## Testing YouTube
 
 **You cannot verify real YouTube playback from the OCI box.** Embeds there
