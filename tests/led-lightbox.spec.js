@@ -364,6 +364,12 @@ test.describe("phone gestures and chrome", () => {
     await open(page);
     await expect(slide(page)).toHaveAttribute("data-state", "playing", { timeout: 8000 });
 
+    // See the note on "the middle is still play/pause": a tap on a muted
+    // video turns the sound on, so pin the player's sound state first.
+    const unmute = page.locator('[data-action="unmute"]');
+    if (await unmute.isVisible()) await unmute.click();
+    await expect(unmute).toBeHidden();
+
     const box = await slide(page).boundingBox();
     await page.touchscreen.tap(box.x + box.width / 2, box.y + box.height / 2);
     await expect
@@ -475,6 +481,19 @@ test.describe("phone: tap zones and pseudo-fullscreen", () => {
     await page.goto("/led/");
     await open(page, '[data-tile][data-orientation="landscape"]');
     await expect(slide(page)).toHaveAttribute("data-state", "playing", { timeout: 8000 });
+
+    /*
+     * A tap in the middle means pause only on a video that already has sound;
+     * on a muted one it means "turn the sound on", which is the documented
+     * behaviour and the whole point of the muted-autoplay fallback. That
+     * fallback can fire here for real reasons — four browsers sharing one
+     * static server can take longer than PLAY_RETRY_MUTED_MS to get the stub
+     * playing — so settle which tap is under test instead of racing it. This
+     * failed about one run in four, under load, on main as well.
+     */
+    const unmute = page.locator('[data-action="unmute"]');
+    if (await unmute.isVisible()) await unmute.click();
+    await expect(unmute, "the tap under test is the one on an unmuted video").toBeHidden();
 
     const stage = page.locator("[data-stage]");
     const [box, media] = await Promise.all([stage.boundingBox(), slide(page).boundingBox()]);

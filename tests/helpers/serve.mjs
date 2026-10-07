@@ -8,7 +8,7 @@ import { extname, join, normalize } from "node:path";
 
 const ROOT = new URL("../../_site/", import.meta.url).pathname;
 const REPO = new URL("../../", import.meta.url).pathname;
-const PORT = Number(process.env.PORT || 4321);
+const PORT = Number(process.env.PORT || 4765); // see playwright.config.js
 
 /*
  * The build happens here, before the socket is open, rather than in a

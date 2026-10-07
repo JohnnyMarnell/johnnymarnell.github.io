@@ -449,6 +449,39 @@
 
 .lightbox__caption:empty { display: none; }
 
+/*
+ * Confirmation for the share button, placed under the toolbar rather than at
+ * the bottom of the stage so it never sits on top of the caption — and the
+ * button it is answering for is right above it.
+ */
+.lightbox__toast {
+  position: absolute;
+  inset: 62px 0 auto 0;
+  z-index: 3;
+  margin: 0;
+  display: flex;
+  justify-content: center;
+  opacity: 0;
+  transform: translateY(-6px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  pointer-events: none;
+}
+
+.lightbox__toast span {
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgb(20 20 24 / 92%);
+  box-shadow: 0 2px 14px rgb(0 0 0 / 45%);
+  color: #fff;
+  font: 500 13px/1 system-ui, sans-serif;
+}
+
+.lightbox__toast[data-on] { opacity: 1; transform: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .lightbox__toast { transition: none; }
+}
+
 /* ------------------------------------------------------------ thumbnails --- */
 
 .lightbox__rail {
