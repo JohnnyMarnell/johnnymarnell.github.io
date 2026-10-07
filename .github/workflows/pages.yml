@@ -47,6 +47,11 @@ jobs:
         run: bundle exec jekyll build
         env:
           JEKYLL_ENV: production
+          # jekyll-github-metadata reads these from GitHub's own builder and
+          # from nowhere else: without them the build dies with "No repo name
+          # found", which is not obviously about this gem at all.
+          PAGES_REPO_NWO: ${{ github.repository }}
+          JEKYLL_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       # The other half of the build. ImageMagick is already on ubuntu-latest,
       # which is what the photo previews are resized with.
