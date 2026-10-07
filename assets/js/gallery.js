@@ -57,8 +57,16 @@
   const PLAYING = 1; // YT.PlayerState.PLAYING, needed before YT has loaded
 
   /*
-   * Deep links. `m` is what gets written; `v` and `item` are only read, because
-   * they are what someone hand-editing a link is likely to reach for.
+   * Deep links. The shareable URL is a path — /led/<slug>/ — because that is
+   * the only shape a link preview can follow: WhatsApp, iMessage and the rest
+   * read og: tags out of server-rendered HTML, never run JS, and GitHub Pages
+   * answers every query string with byte-identical HTML. So each item has a
+   * real generated page carrying its own og:image (see
+   * scripts/build-share-pages.mjs), and this writes that path.
+   *
+   * ?m= is still read, and normalised to the path on arrival — links shared
+   * before the share pages existed keep working. `v` and `item` are read too,
+   * being what someone hand-editing a link reaches for.
    */
   const URL_PARAM = "m";
   const URL_PARAM_ALIASES = ["v", "item"];
@@ -128,10 +136,30 @@
     return -1;
   }
 
-  const urlParams = () => new URL(location.href).searchParams;
+  /*
+   * The gallery's own page, e.g. "/led/", stamped on the container by the
+   * markup that has share pages behind it. Absent, everything below falls back
+   * to ?m= — so a gallery dropped on a page with no generated share pages
+   * still deep-links, just without previews.
+   */
+  const base = gallery.dataset.base || "";
 
-  function paramIndex() {
-    const q = urlParams();
+  // The slug sitting in the path, on a share page.
+  function pathIndex() {
+    if (!base || !location.pathname.startsWith(base)) return -1;
+    const rest = location.pathname.slice(base.length).replace(/\/+$/, "");
+    if (!rest || rest.includes("/")) return -1;
+    try {
+      return indexForSlug(decodeURIComponent(rest));
+    } catch {
+      return -1; // a malformed %-escape is just not one of ours
+    }
+  }
+
+  function linkedIndex() {
+    const byPath = pathIndex();
+    if (byPath >= 0) return byPath;
+    const q = new URL(location.href).searchParams;
     for (const key of [URL_PARAM, ...URL_PARAM_ALIASES]) {
       const i = indexForSlug(q.get(key));
       if (i >= 0) return i;
@@ -139,19 +167,26 @@
     return -1;
   }
 
-  // Absolute, and with the aliases dropped so a link never carries two answers.
-  function urlFor(i) {
-    const u = new URL(location.href);
-    URL_PARAM_ALIASES.forEach((k) => u.searchParams.delete(k));
-    u.searchParams.set(URL_PARAM, slugs[i]);
+  const stripParams = (u) => {
+    [URL_PARAM, ...URL_PARAM_ALIASES].forEach((k) => u.searchParams.delete(k));
     u.hash = "";
+    return u;
+  };
+
+  // Absolute, and never carrying both a path and a param answer.
+  function urlFor(i) {
+    const u = stripParams(new URL(location.href));
+    if (base) {
+      u.pathname = base + encodeURIComponent(slugs[i]) + "/";
+      return u.href;
+    }
+    u.searchParams.set(URL_PARAM, slugs[i]);
     return u.href;
   }
 
   function urlWithoutItem() {
-    const u = new URL(location.href);
-    [URL_PARAM, ...URL_PARAM_ALIASES].forEach((k) => u.searchParams.delete(k));
-    u.hash = "";
+    const u = stripParams(new URL(location.href));
+    if (base) u.pathname = base;
     return u.href;
   }
 
@@ -702,7 +737,7 @@
          * same meaning it has for a click — close the viewer, here are the
          * tiles — while a reload still lands on the shared slide.
          */
-        if (paramIndex() >= 0) history.replaceState({ lb: null }, "", urlWithoutItem());
+        if (linkedIndex() >= 0) history.replaceState({ lb: null }, "", urlWithoutItem());
         history.pushState({ lb: slugs[i] }, "", urlFor(i));
         pushedHistory = true;
       });
@@ -742,7 +777,7 @@
    * that one. Nothing in this handler writes history back.
    */
   window.addEventListener("popstate", () => {
-    const i = paramIndex();
+    const i = linkedIndex();
     if (i < 0) {
       if (!root.hidden) close({ fromHistory: true });
       return;
@@ -1078,7 +1113,7 @@
    * One frame of delay so the masonry columns above exist first; the scroll
    * target is wrong before they do.
    */
-  const linked = paramIndex();
+  const linked = linkedIndex();
   if (linked >= 0) {
     window.scrollTo(0, 0);
     requestAnimationFrame(() => {
