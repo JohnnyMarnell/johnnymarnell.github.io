@@ -30,11 +30,6 @@ clean:
 media:
     node scripts/probe-media.mjs
 
-# Regenerate share/ — one page per gallery item, so a pasted link previews it.
-# Ex: just share --check   Ex: just share --force (rebuild the preview JPEGs)
-share *args:
-    node scripts/build-share-pages.mjs {{args}}
-
 # Install the Playwright browser used by the gallery tests
 test-install:
     npm install && npx playwright install chromium

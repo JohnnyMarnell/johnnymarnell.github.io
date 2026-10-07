@@ -28,25 +28,6 @@ async function isVertical(id) {
   throw new Error(`unexpected status ${res.status} for ${id}`);
 }
 
-/*
- * The poster a link preview should point at. maxresdefault is missing for
- * plenty of uploads — the gallery tiles already carry a fallback chain for
- * exactly that — and an og:image pointing at a 404 renders as no preview at
- * all. Resolved here and committed, so neither the share-page generator nor
- * the test suite has to reach YouTube to know which one is real.
- */
-const POSTERS = ["maxresdefault.jpg", "hq720.jpg", "mqdefault.jpg"];
-
-async function poster(id) {
-  for (const file of POSTERS) {
-    const res = await fetch(`https://i.ytimg.com/vi/${id}/${file}`);
-    if (!res.ok) continue;
-    const size = jpegSize(Buffer.from(await res.arrayBuffer()));
-    if (size) return { file, width: size.width, height: size.height };
-  }
-  throw new Error(`no usable poster for ${id} — tried ${POSTERS.join(", ")}`);
-}
-
 /** Width/height from a JPEG's SOF marker. */
 function jpegSize(buf) {
   let i = 2;
@@ -76,36 +57,18 @@ async function markdownFiles(dir, out = []) {
 
 // --- videos referenced anywhere in the site ---------------------------------
 const ids = new Set();
-const addId = (raw) =>
-  ids.add(raw.replace(/^.*(?:v=|youtu\.be\/|shorts\/)/, "").split(/[&?]/)[0]);
-
 for (const file of await markdownFiles(REPO)) {
   const text = await readFile(file, "utf8");
-  for (const m of text.matchAll(/\{%\s*include\s+video\s+[^%]*id=["']([^"']+)["']/g)) addId(m[1]);
+  for (const m of text.matchAll(/\{%\s*include\s+video\s+[^%]*id=["']([^"']+)["']/g)) {
+    ids.add(m[1].replace(/^.*(?:v=|youtu\.be\/|shorts\/)/, "").split(/[&?]/)[0]);
+  }
 }
-
-/*
- * The /led gallery's items moved into _data/led.yml so `just share` could walk
- * the same list, and its include is now `id=item.video` — which the scan above
- * cannot see. Without this, a `just media` run would quietly write a media.yml
- * with no videos in it and every tile would fall back to landscape.
- */
-for (const m of (await readFile(join(REPO, "_data/led.yml"), "utf8")).matchAll(
-  /^\s*-?\s*video:\s*(\S+)/gm,
-)) addId(m[1]);
 
 const videos = {};
 for (const id of [...ids].sort()) {
   const vertical = await isVertical(id);
-  const p = await poster(id);
-  videos[id] = {
-    orientation: vertical ? "portrait" : "landscape",
-    aspect: vertical ? "9:16" : "16:9",
-    poster: p.file,
-    poster_width: p.width,
-    poster_height: p.height,
-  };
-  console.log(`  ${id}  ${videos[id].orientation}  ${p.file} ${p.width}x${p.height}`);
+  videos[id] = { orientation: vertical ? "portrait" : "landscape", aspect: vertical ? "9:16" : "16:9" };
+  console.log(`  ${id}  ${videos[id].orientation}`);
 }
 
 // --- images in /img ----------------------------------------------------------
@@ -128,14 +91,9 @@ const yaml = [
   "#",
   "# Video orientation cannot be read from any endpoint a page can reach —",
   "# see the script's header. It is probed server-side and committed here.",
-  "#",
-  "# `poster` is which of YouTube's thumbnails actually exists for that id, and",
-  "# its real pixel size: og:image for a share page points at it, and a preview",
-  "# whose image 404s shows no picture at all.",
   "videos:",
   ...Object.entries(videos).map(([id, v]) =>
-    `  "${id}": { orientation: ${v.orientation}, aspect: "${v.aspect}", ` +
-    `poster: "${v.poster}", poster_width: ${v.poster_width}, poster_height: ${v.poster_height} }`),
+    `  "${id}": { orientation: ${v.orientation}, aspect: "${v.aspect}" }`),
   "images:",
   ...Object.entries(images).map(([path, i]) =>
     `  "${path}": { orientation: ${i.orientation}, aspect: "${i.aspect}", width: ${i.width}, height: ${i.height} }`),
