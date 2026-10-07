@@ -1,5 +1,5 @@
 /*
- * Deep links into the carousel: /led/?m=<slug>.
+ * Deep links into the carousel: /led/<slug>/.
  *
  * The contract these specs pin down, in order of how much it would hurt to get
  * wrong:
@@ -15,8 +15,16 @@ const { stubYouTube, endCurrentVideo } = require("./helpers/youtube");
 const lightbox = (page) => page.locator("[data-lightbox]");
 const slide = (page) => page.locator("[data-slide]");
 
-const itemParam = (page) =>
-  page.evaluate(() => new URL(location.href).searchParams.get("m"));
+/*
+ * The item the URL names. A path, not a query param — a link preview can only
+ * follow a path, see scripts/share-pages.mjs — so this reads the last segment,
+ * and null at the bare gallery.
+ */
+const itemInUrl = (page) =>
+  page.evaluate(() => {
+    const rest = new URL(location.href).pathname.replace(/^\/led\/?/, "").replace(/\/+$/, "");
+    return rest || null;
+  });
 
 /*
  * By authored order, not DOM order — gallery.js repacks the tiles into column
@@ -31,14 +39,14 @@ test.describe("rewriting the URL", () => {
   test("opening a tile names it in the address bar", async ({ page }) => {
     await stubYouTube(page);
     await page.goto("/led/");
-    await itemParam(page).then((p) => expect(p, "clean before any click").toBeNull());
+    await itemInUrl(page).then((p) => expect(p, "clean before any click").toBeNull());
 
     const tile = tileAt(page, 0);
     const slug = await tile.getAttribute("data-slug");
     await tile.click();
     await expect(lightbox(page)).toBeVisible();
 
-    expect(await itemParam(page)).toBe(slug);
+    expect(await itemInUrl(page)).toBe(slug);
     // Readability of the shared link is the whole point: for a video the slug
     // is the YouTube id, cased as YouTube cases it.
     expect(slug).toBe(await tile.getAttribute("data-yt"));
@@ -52,11 +60,11 @@ test.describe("rewriting the URL", () => {
 
     await page.keyboard.press("ArrowRight");
     await expect(slide(page)).toHaveAttribute("data-index", "1");
-    expect(await itemParam(page)).toBe(await slugAt(page, 1));
+    expect(await itemInUrl(page)).toBe(await slugAt(page, 1));
 
     await page.keyboard.press("ArrowRight");
     await expect(slide(page)).toHaveAttribute("data-index", "2");
-    expect(await itemParam(page)).toBe(await slugAt(page, 2));
+    expect(await itemInUrl(page)).toBe(await slugAt(page, 2));
   });
 
   test("closing puts the URL back", async ({ page }) => {
@@ -67,7 +75,7 @@ test.describe("rewriting the URL", () => {
 
     await page.keyboard.press("Escape");
     await expect(lightbox(page)).toBeHidden();
-    await expect.poll(() => itemParam(page)).toBeNull();
+    await expect.poll(() => itemInUrl(page)).toBeNull();
   });
 
   test("a whole walk through the set costs one history entry", async ({ page }) => {
@@ -89,7 +97,7 @@ test.describe("rewriting the URL", () => {
 
     await page.goBack();
     await expect(lightbox(page), "one Back should close it").toBeHidden();
-    await expect.poll(() => itemParam(page)).toBeNull();
+    await expect.poll(() => itemInUrl(page)).toBeNull();
   });
 
   test("Forward reopens where you were", async ({ page }) => {
@@ -112,7 +120,7 @@ test.describe("honouring the URL", () => {
     await page.goto("/led/");
     const slug = await slugAt(page, 5);
 
-    await page.goto(`/led/?m=${slug}`);
+    await page.goto(`/led/${slug}/`);
     await expect(lightbox(page)).toBeVisible({ timeout: 8000 });
     await expect(slide(page)).toHaveAttribute("data-index", "5");
     await expect(slide(page)).toHaveAttribute("data-state", "playing", { timeout: 8000 });
@@ -120,29 +128,44 @@ test.describe("honouring the URL", () => {
 
   test("a photo's link opens the photo", async ({ page }) => {
     await stubYouTube(page);
-    await page.goto("/led/?m=img-7415");
+    await page.goto("/led/img-7415/");
     await expect(lightbox(page)).toBeVisible({ timeout: 8000 });
     await expect(slide(page)).toHaveAttribute("data-kind", "image");
     expect(await page.locator("[data-poster]").getAttribute("src")).toContain("7415");
   });
 
-  test("?v= and a bare index are honoured too, and normalised to ?m=", async ({ page }) => {
-    // What someone hand-editing a link reaches for. Accepting them costs two
-    // lines; the link they then copy back out should still be the canonical one.
+  test("the old ?m= links still work, and upgrade themselves to the path", async ({ page }) => {
+    /*
+     * ?m= was the shareable URL before the share-page build step existed, and
+     * links in other people's chat histories do not get a migration. They are
+     * still honoured, and rewritten to /led/<slug>/ on arrival so the copy the
+     * visitor shares on is the one that previews.
+     */
+    await stubYouTube(page);
+    await page.goto("/led/");
+    const slug = await slugAt(page, 1);
+
+    await page.goto(`/led/?m=${slug}`);
+    await expect(slide(page)).toHaveAttribute("data-index", "1", { timeout: 8000 });
+    await expect.poll(() => itemInUrl(page)).toBe(slug);
+    expect(await page.evaluate(() => location.search), "the param should be gone").toBe("");
+  });
+
+  test("?v= and a bare index are honoured too", async ({ page }) => {
+    // What someone hand-editing a link reaches for.
     await stubYouTube(page);
     await page.goto("/led/");
     const slug = await slugAt(page, 1);
 
     await page.goto(`/led/?v=${slug}`);
     await expect(slide(page)).toHaveAttribute("data-index", "1", { timeout: 8000 });
-    await expect.poll(() => itemParam(page)).toBe(slug);
-    expect(await page.evaluate(() => location.search)).not.toContain("v=");
+    await expect.poll(() => itemInUrl(page)).toBe(slug);
 
     await page.goto("/led/?m=3");
     await expect(slide(page)).toHaveAttribute("data-index", "2", { timeout: 8000 });
   });
 
-  test("an unrecognised ?m= leaves the page alone", async ({ page }) => {
+  test("an unrecognised item leaves the page alone", async ({ page }) => {
     // Opening item 1 for a link that asked for something else is a worse
     // answer than ignoring it — the visitor would never know they'd been
     // redirected.
@@ -157,7 +180,7 @@ test.describe("honouring the URL", () => {
 
   test("Back from a shared link closes the viewer onto the gallery", async ({ page }) => {
     /*
-     * Arriving on ?m=, the entry underneath is the referrer, so Back would
+     * Arriving on a share page, the entry underneath is the referrer, so Back would
      * leave the site with the visitor never having seen the page they landed
      * on. open() rewrites that entry to the bare gallery and pushes the item
      * on top, so Back means the same thing it does after a click.
@@ -165,18 +188,18 @@ test.describe("honouring the URL", () => {
     await stubYouTube(page);
     await page.goto("/led/");
     const slug = await slugAt(page, 4);
-    await page.goto(`/led/?m=${slug}`);
+    await page.goto(`/led/${slug}/`);
     await expect(lightbox(page)).toBeVisible({ timeout: 8000 });
 
     await page.goBack();
     await expect(lightbox(page)).toBeHidden();
-    await expect.poll(() => itemParam(page)).toBeNull();
+    await expect.poll(() => itemInUrl(page)).toBeNull();
     await expect(page.locator(".gallery__col").first()).toBeVisible();
   });
 
   test("a reload of a shared link lands on the same item", async ({ page }) => {
     await stubYouTube(page);
-    await page.goto("/led/?m=img-0494");
+    await page.goto("/led/img-0494/");
     await expect(lightbox(page)).toBeVisible({ timeout: 8000 });
     const index = await slide(page).getAttribute("data-index");
 
@@ -207,7 +230,7 @@ test.describe("the scroll in", () => {
      */
     await recordScroll(page);
     await stubYouTube(page);
-    await page.goto("/led/?m=qo0L7gmySvQ");
+    await page.goto("/led/qo0L7gmySvQ/");
     await expect(lightbox(page)).toBeVisible({ timeout: 8000 });
 
     const seen = await trail(page);
@@ -227,7 +250,7 @@ test.describe("the scroll in", () => {
   test("it glides, rather than teleporting", async ({ page }) => {
     await recordScroll(page);
     await stubYouTube(page);
-    await page.goto("/led/?m=qo0L7gmySvQ");
+    await page.goto("/led/qo0L7gmySvQ/");
     await expect(lightbox(page)).toBeVisible({ timeout: 8000 });
 
     const seen = await trail(page);
@@ -241,7 +264,7 @@ test.describe("the scroll in", () => {
     await page.emulateMedia({ reducedMotion: "reduce" });
     await recordScroll(page);
     await stubYouTube(page);
-    await page.goto("/led/?m=qo0L7gmySvQ");
+    await page.goto("/led/qo0L7gmySvQ/");
     await expect(lightbox(page)).toBeVisible({ timeout: 8000 });
 
     expect(await page.evaluate(() => Math.round(window.scrollY))).toBeGreaterThan(80);
@@ -251,7 +274,7 @@ test.describe("the scroll in", () => {
 
   test("closing leaves the visitor at the gallery, not back at the top", async ({ page }) => {
     await stubYouTube(page);
-    await page.goto("/led/?m=qo0L7gmySvQ");
+    await page.goto("/led/qo0L7gmySvQ/");
     await expect(lightbox(page)).toBeVisible({ timeout: 8000 });
     await page.keyboard.press("Escape");
     await expect(lightbox(page)).toBeHidden();
@@ -267,7 +290,7 @@ test.describe("the cycle", () => {
      * this page is item 9 of 13.
      */
     await stubYouTube(page);
-    await page.goto("/led/?m=img-0328");
+    await page.goto("/led/img-0328/");
     await expect(lightbox(page)).toBeVisible({ timeout: 8000 });
     await expect(slide(page)).toHaveAttribute("data-kind", "image");
     const from = Number(await slide(page).getAttribute("data-index"));
@@ -291,7 +314,7 @@ test.describe("the cycle", () => {
 
   test("steering stops the show", async ({ page }) => {
     await stubYouTube(page);
-    await page.goto("/led/?m=img-0328");
+    await page.goto("/led/img-0328/");
     await expect(lightbox(page)).toBeVisible({ timeout: 8000 });
     await expect(slide(page)).toHaveAttribute("data-kind", "image");
 
@@ -337,7 +360,8 @@ test.describe("the share button", () => {
     await expect(page.locator("[data-toast]")).toHaveAttribute("data-on", "");
 
     const copied = await page.evaluate(() => navigator.clipboard.readText());
-    expect(copied).toContain(`?m=${slug}`);
+    expect(copied, "the path form, which is the one that previews").toContain(`/led/${slug}/`);
+    expect(copied).not.toContain("?m=");
     expect(copied, "a link worth sharing is absolute").toMatch(/^https?:\/\//);
   });
 
@@ -354,7 +378,7 @@ test.describe("the share button", () => {
     await page.locator('[data-action="share"]').click();
     const shared = await page.evaluate(() => window.__shared);
     expect(shared).toHaveLength(1);
-    expect(shared[0].url).toContain("?m=");
+    expect(shared[0].url).toMatch(/\/led\/[^/]+\/$/);
     expect(shared[0].title, "the caption, so the link arrives with a name").toBeTruthy();
   });
 });

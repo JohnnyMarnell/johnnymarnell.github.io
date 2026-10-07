@@ -7,7 +7,8 @@ Jekyll site for johnnymarnell.github.io, served by GitHub Pages from `main`.
 ```bash
 just install       # bundle install (Ruby gems -> vendor/bundle)
 just serve         # jekyll serve --livereload on :4000
-just build         # jekyll build -> _site/
+just build         # jekyll build + the share-page step -> _site/
+just share         # the share-page step alone, over the existing _site
 just test-install  # npm install + playwright install chromium (once)
 just test          # jekyll build, then Playwright (desktop + phone projects)
 just test-fast     # same, against the existing _site — skips the ~15s rebuild
@@ -59,39 +60,86 @@ where the real vertical frame sits, so plain `object-fit: cover` lands on it —
 no crop hackery needed. Those two ratios are also what the placement loop uses
 to predict heights, so it never reads back layout.
 
-## Deep links (`/led/?m=<slug>`)
+## Link previews — a build step, not files in the repo (`/led/<slug>/`)
 
-Opening an item rewrites the address bar; that URL reopens the same view from
-cold. The slug is the tile's `data-slug` — a video's YouTube id, a photo's
-filename stem (`IMG_0328.HEIC.jpg` -> `img-0328`), both emitted by the
-includes. Not the index: inserting a tile at the top would silently repoint
-every link ever shared. `gallery.js` settles duplicates (Liquid cannot see a
-tile's siblings) and keeps the authored case, folding it only to match, so a
-pasted `?m=Kg0VKvDbvkU` still reads as the video it is.
+A link pasted into WhatsApp, iMessage, Slack or Discord previews **the item it
+points at**. That is the only reason the shareable URL is a path.
+
+A preview is made by a crawler that fetches the URL and reads `og:` tags out of
+the HTML. It never runs JavaScript, and GitHub Pages answers every query string
+with byte-identical HTML — so `/led/?m=<slug>` can only ever preview as
+`/led/`, whatever the page does at runtime. A per-item preview needs a per-item
+*path*.
+
+**`scripts/share-pages.mjs` writes those paths at build time, into `_site`.**
+Nothing it makes is committed and nothing in the source tree knows it exists:
+adding a clip is still one `{% include video %}` line in `led.md`. It reads the
+*built* `/led/` page — the tiles already carry `data-slug`, `data-kind` and
+`data-caption`, which is what `gallery.js` indexes by too — so there is no
+second list to keep in step. For each tile it copies the page, swaps
+jekyll-seo-tag's block (which is delimited by `<!-- Begin/End Jekyll SEO tag -->`,
+so it is one replaceable unit) for per-item tags, and writes
+`_site/led/<slug>/index.html`. The description comes from the page's own first
+paragraph; the index gets a preview of its own from the first tile.
+
+**An earlier attempt committed a generated page per item and was reverted** (#3,
+#4). It worked, and it cost an edit to a data file plus a generator run plus 18
+committed artifacts every time a clip was added. Don't go back to that.
+
+**Why not a Jekyll generator plugin,** which would be the idiomatic answer: the
+`github-pages` gem forces safe mode, so `_plugins/` is ignored even in a local
+`bundle exec jekyll build`. Verified, not assumed. Dropping that gem would
+re-float every pinned version the rest of the site renders with, to buy nothing
+the build step cannot do.
+
+**Preview images.** Videos use the poster chain the tile itself carries
+(`src` then `data-poster-fallback`), walked until one answers — `maxresdefault`
+is missing for plenty of uploads and an `og:image` that 404s renders as no
+preview at all. Results are cached in `.jekyll-cache/share/`; offline, the
+first is used unprobed with a warning rather than failing the build. Photos
+cannot be their own preview (0.8-2.8 MB at 4032px — crawlers skip images that
+big), so each is resized to ~1200px into `_site/assets/share/`, using whichever
+of `magick`/`convert`/`ffmpeg`/`sips` is present.
+
+**`just serve` deliberately skips the step.** Those pages do not exist under
+`jekyll serve`, so the `<meta name="gallery-base">` the step injects is absent
+and `gallery.js` falls back to `?m=` rather than linking at 404s. That marker
+is what switches the two shapes, which is also why it is injected by the step
+and not put in the layout.
+
+## Deep links (`/led/<slug>/`, or `?m=` without the build step)
+
+The slug is the tile's `data-slug` — a video's YouTube id, a photo's filename
+stem (`IMG_0328.HEIC.jpg` -> `img-0328`). Not the index: inserting a tile at
+the top would silently repoint every link ever shared. `gallery.js` settles
+duplicates (Liquid cannot see a tile's siblings) and keeps the authored case,
+folding it only to match, so a pasted `/led/Kg0VKvDbvkU/` still reads as the
+video it is.
 
 **One `pushState` per opening, `replaceState` per slide.** A carousel that
 auto-advances would otherwise bury the page you arrived from under thirteen
 entries, and Back has to mean "close the viewer" however far in you walked.
-Arriving on a `?m=` link, `open()` rewrites that entry to the bare gallery and
+Arriving on a share page, `open()` rewrites that entry to the bare gallery and
 pushes the item back on top, so Back means the same thing there as after a
 click while a reload still lands on the shared slide. `popstate` treats the URL
 as the only truth and never writes history back.
 
-`?v=` and `?item=` are read as aliases and normalised away; a bare 1-based
-index works for hand-typed links. **An unrecognised value opens nothing** —
-silently showing item 1 for a link that asked for something else is a worse
-answer than ignoring it.
+`?m=` is still read and upgraded to the path on arrival — links shared before
+the share pages existed don't get a migration. `?v=` and `?item=` are read as
+aliases, and a bare 1-based index works for hand-typed links. **An unrecognised
+value opens nothing** — silently showing item 1 for a link that asked for
+something else is a worse answer than ignoring it.
 
 The tiles' own `href` still points at YouTube / the full-size image, because
 with JS off that link is the only thing that works. The share button is what
-hands over a `?m=` link (`navigator.share`, else the clipboard).
+hands over the share URL (`navigator.share`, else the clipboard).
 
 **A deep link scrolls in.** It starts at the top of the page whatever the
-browser restored, travels down to the gallery, and only then opens — a
-lightbox materialising over a page the visitor has never seen tells them
-nothing about where they are. There is no portable "smooth scroll finished"
-event (`scrollend` is absent on Safari), so it watches the position settle,
-with `SCROLL_SETTLE_MS` as the backstop; `prefers-reduced-motion` gets a jump.
+browser restored, travels down to the gallery, and only then opens — a lightbox
+materialising over a page the visitor has never seen tells them nothing about
+where they are. There is no portable "smooth scroll finished" event
+(`scrollend` is absent on Safari), so it watches the position settle, with
+`SCROLL_SETTLE_MS` as the backstop; `prefers-reduced-motion` gets a jump.
 
 **Photos take a turn and move on, videos always did.** A video advancing on
 ENDED is old behaviour; the cycle used to stop dead at item 9 of 13, the first
@@ -176,7 +224,16 @@ click being read as a tap.
 
 ## CI
 
-`.github/workflows/tests.yml` is `workflow_dispatch` only, on purpose. GitHub
-Pages publishes from `main` on its own, and installing Ruby, Node, gems, npm
-deps and Chromium on every push cost minutes for a gate nothing waits on. Run
+`.github/workflows/pages.yml` builds and publishes the site on every push to
+`main`. It replaced GitHub's own Pages builder, which runs Jekyll with no build
+step and ignores `_plugins/` — and the site needs one (see the link-previews
+section). The trade: the site now updates only if that workflow succeeds, where
+before GitHub's builder just worked. It is minimal for that reason — Ruby,
+gems, Jekyll, one node script, no browsers, no npm — and it asserts the share
+pages actually got written rather than publishing a site that looks fine until
+somebody pastes a link.
+
+`.github/workflows/tests.yml` stays `workflow_dispatch` only, on purpose:
+installing Chromium and npm deps on every push costs minutes for a gate nothing
+waits on, and it must never stand between a push and the site being live. Run
 the suite locally with `just test` (or from the Actions tab when you want it).

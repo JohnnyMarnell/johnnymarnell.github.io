@@ -1,0 +1,77 @@
+# Builds and publishes the site.
+#
+# This replaced GitHub's own Pages builder, which runs Jekyll with no build
+# step of any kind and ignores _plugins/ — and the site needs one:
+# scripts/share-pages.mjs gives every gallery item a URL that previews as that
+# item (see CLAUDE.md). The alternative was committing a generated page per
+# clip, which costs an editing step every time one is added.
+#
+# What that trade costs: the site now updates only if this workflow succeeds,
+# where before GitHub's builder just worked. It is deliberately minimal for
+# that reason — Ruby, gems, Jekyll, one node script, no browsers, no npm. The
+# Playwright suite stays out of it on purpose (.github/workflows/tests.yml is
+# workflow_dispatch only) so a slow test run never stands between a push and
+# the site being live.
+name: Deploy site
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Never two deploys at once; let a running one finish rather than publishing a
+# half-built site.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+
+      - uses: actions/configure-pages@v5
+
+      - name: Build site
+        run: bundle exec jekyll build
+        env:
+          JEKYLL_ENV: production
+
+      # The other half of the build. ImageMagick is already on ubuntu-latest,
+      # which is what the photo previews are resized with.
+      - name: Share pages
+        run: node scripts/share-pages.mjs
+
+      # Loud rather than silent: a published site whose share pages quietly
+      # stopped being generated looks completely fine until somebody pastes a
+      # link, so fail the deploy instead.
+      - name: Check the share pages were written
+        run: |
+          test -f _site/led/index.html
+          count=$(find _site/led -mindepth 2 -name index.html | wc -l)
+          echo "share pages: $count"
+          test "$count" -ge 1
+          grep -q 'name="gallery-base"' _site/led/index.html
+
+      - uses: actions/upload-pages-artifact@v3
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

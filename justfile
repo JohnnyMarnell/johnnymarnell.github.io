@@ -18,9 +18,14 @@ yotein port="4000":
     @( sleep 2 && open "http://127.0.0.1:{{port}}/yotein/" ) &
     bundle exec jekyll serve --host 0.0.0.0 --port {{port}} --livereload
 
-# Build the site to _site/ without serving
+# Build the site to _site/ without serving (incl. the share-page build step)
 build:
     bundle exec jekyll build
+    node scripts/share-pages.mjs
+
+# Share pages over the existing _site: a previewable /led/<slug>/ URL per item
+share *args:
+    node scripts/share-pages.mjs {{args}}
 
 # Remove _site/ and .jekyll-cache/
 clean:

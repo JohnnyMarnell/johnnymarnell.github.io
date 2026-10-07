@@ -25,9 +25,17 @@ if (process.env.SKIP_BUILD === "1") {
     console.error("SKIP_BUILD=1 but _site/led/index.html is missing — run `just build` first.");
     process.exit(1);
   }
+  // `just build` runs both halves; a bare `jekyll build` leaves the share
+  // pages out, and the suite would report their absence as a code failure.
+  if (!existsSync(join(ROOT, "led/Kg0VKvDbvkU/index.html"))) {
+    execFileSync("node", ["scripts/share-pages.mjs"], { cwd: REPO, stdio: "inherit" });
+  }
 } else {
   try {
     execFileSync("bundle", ["exec", "jekyll", "build"], { cwd: REPO, stdio: "inherit" });
+    // Part of a build, not an extra: the deployed site is jekyll + this, and a
+    // suite running against only the first half would miss every share page.
+    execFileSync("node", ["scripts/share-pages.mjs"], { cwd: REPO, stdio: "inherit" });
   } catch (err) {
     console.error(
       err.code === "ENOENT"
